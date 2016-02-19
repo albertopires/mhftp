@@ -1,0 +1,11 @@
+---
+layout: page
+---
+{% capture my_include %}{% include docs/README.md %}{% endcapture %}
+{{ my_include | markdownify }}
+
+<div class="post-footer">
+  <div class="column-full">
+    <h3><a href="{{ '/' | prepend: site.baseurl | prepend: site.url }}">/home</a></h3>
+  </div>
+</div>
