@@ -1,0 +1,11 @@
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+*.swp
+#
+initFile
+mhclient
+mhftp
+mhstatus
