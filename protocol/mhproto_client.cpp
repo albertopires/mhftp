@@ -155,26 +155,44 @@ void MhProtoClient::DownloadFileFromServer(
         }
     }
 
+    monitor_pid_ = fork();
+    if (monitor_pid_== 0) {
+        char in_use = 1;
+        while (in_use == 1) {
+            in_use = metadata_.getInUse();
+            printf("%s", ANSI_SC);
+            metadata_.DisplayControlData();
+            metadata_.LoadMetadata(metaFile);
+            printf("\n");
+            if (in_use == 1) printf("%s", ANSI_RC);
+            sleep(1);
+        }
+        exit(0);
+    }
+
     for (int i = 0 ; i < numClient_ ; i++) {
         DEBUG("Wait for pid : %d\n", pid_[i]);
         waitpid(pid_[i], NULL, 0);
     }
 
-    cout << "End of Transfer:" << endl;
-    cout << "File MD5 : ";
-    cout << md5utils_.digestToStr(metadata_.getDigest()) << endl;
-
     metadata_.LoadMetadata(metaFile);
     metadata_.setInUse(0);
     metadata_.saveMetadata(metaFile);
+
+    waitpid(monitor_pid_, NULL, 0);
 
     MD5Utils md5download;
     // createError(localFile);
     md5download.md5File(localFile);
 
+    cout << "End of Transfer:" << endl;
+    cout << "File MD5 : ";
+    cout << md5utils_.digestToStr(metadata_.getDigest()) << endl;
+
     if (memcmp(metadata_.getDigest(), md5download.getDigest(), 16) != 0) {
         cout << "Downloaded file is corrupted." << endl;
     }
+
 }
 
 //  public
@@ -216,6 +234,7 @@ void MhProtoClient::KillClient(void) {
     kill_proc_++;
 
     if (main_proc_ && kill_proc_ > 1) {
+        kill(monitor_pid_, SIGKILL);
         const char *metaStatus = meta_file_ == NULL ? "null" : "Not NULL";
         DEBUG("My pid : %d - meta_file_ : <%s>" , getpid(), metaStatus);
         DEBUG("  Main : %d\n", main_proc_);

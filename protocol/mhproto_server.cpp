@@ -61,7 +61,7 @@ void MhProtoServer::SendChunkToClient(void) {
             waitForClient = 0;
             break;
         }
-
+sleep(0);  
         int filePos = (chunkNumber*metadata_.getChunkSize());
         lseek(fd, filePos , SEEK_SET);
         chunk = LoadChunkFromFile(fd, payLoadArray[chunkNumber]);

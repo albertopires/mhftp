@@ -275,7 +275,7 @@ void Metadata::updateControlData(const char *metaFile) {
     close(fdCtrl);
 }
 
-void Metadata::displayControlData(const char* metaFile) {
+void Metadata::DisplayControlData(const char* metaFile) {
     LoadMetadata(metaFile);
 
     int64_t nChunks = getChunks();
@@ -291,10 +291,9 @@ void Metadata::displayControlData(const char* metaFile) {
         if (chunkInfo_[i].status == CH_DOWNLOAD)
             PrintColor("D", LC_CYAN);
     }
-    printf("\n");
 }
 
-void Metadata::displayControlDataMD5(const char* metaFile) {
+void Metadata::DisplayControlDataMD5(const char* metaFile) {
     LoadMetadata(metaFile);
 
     int64_t nChunks = getChunks();
@@ -313,19 +312,21 @@ void Metadata::displayControlDataMD5(const char* metaFile) {
         printf(" %ld", (long)chunkInfo_[i].size); // NOLINT
         cout << C_RESET << endl;
     }
-    printf("\n");
 }
 
-void Metadata::displayControlData(void) {
+void Metadata::DisplayControlData(void) {
     int64_t nChunks = getChunks();
     printf("Number of chunks : %ld\n", i64toLong(nChunks));
     for (int i = 0 ; i < nChunks ; i++) {
-        if (chunkInfo_[i].status == CH_OK) printf("O");
-        if (chunkInfo_[i].status == CH_PENDING) printf("P");
-        if (chunkInfo_[i].status == CH_ERROR) printf("E");
-        if (chunkInfo_[i].status == CH_DOWNLOAD) printf("D");
+        if (chunkInfo_[i].status == CH_OK)
+            PrintColor("O", DC_GREEN);
+        if (chunkInfo_[i].status == CH_PENDING)
+            PrintColor("P", DC_WHITE);
+        if (chunkInfo_[i].status == CH_ERROR)
+            PrintColor("E", LC_RED);
+        if (chunkInfo_[i].status == CH_DOWNLOAD)
+            PrintColor("D", LC_CYAN);
     }
-    printf("\n");
 }
 
 int64_t Metadata::getNextPendingChunk(void) {

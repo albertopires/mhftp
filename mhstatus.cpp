@@ -91,10 +91,14 @@ void displayData(const char* controlFile, int verbose) {
 
     printf("Control File: <%s>\n\n" , controlFile);
 
-    if (verbose)
-        metadata.displayControlDataMD5(controlFile);
-    else
-        metadata.displayControlData(controlFile);
+    if (verbose) {
+        metadata.DisplayControlDataMD5(controlFile);
+        cout << endl;
+    }
+    else {
+        metadata.DisplayControlData(controlFile);
+        cout << endl;
+    }
 
     exit(0);
 }

@@ -29,6 +29,7 @@ class MhProtoClient {
     int *client_sd_;  // Array of client sockets
     int numClient_;   // Number of client sockets
     int pid_[NPROC];
+    int monitor_pid_;
     int kill_proc_;
     bool main_proc_;
 
