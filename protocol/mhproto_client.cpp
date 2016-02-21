@@ -41,7 +41,7 @@ void MhProtoClient::DownloadFileFromServer(
 
     int64_t chunkNumber = -1;
     do {
-        printf("Before lock : %ld - \033[1m\033[32m%d\033[0m\n",
+        DEBUG("Before lock : %ld - \033[1m\033[32m%d\033[0m\n",
                 i64toLong(chunkNumber),
                 getpid());
         sem_->semaphore_get_lock();
@@ -53,18 +53,18 @@ void MhProtoClient::DownloadFileFromServer(
         }
         metadata_.setChunkStatus(chunkNumber, CH_DOWNLOAD, NULL);
         metadata_.updateControlData(metaFile);
-        printf("Next Pending Chunk : %ld\n" , i64toLong(chunkNumber));
+        DEBUG("Next Pending Chunk : %ld\n", i64toLong(chunkNumber));
         sem_->semaphore_release_lock();
 
         // Receive chunk
         RequestChunk(cd_sd, chunkNumber);
 
-        printf("Next Pending Chunk-v : %ld\n" , i64toLong(chunkNumber));
+        DEBUG("Next Pending Chunk-v : %ld\n", i64toLong(chunkNumber));
         so_read(cd_sd, rcv_md5sum, DIGEST_SIZE);
-        printf("MD5       : <%s>\n" , md5Utils.digestToStr(rcv_md5sum));
+        DEBUG("MD5       : <%s>\n", md5Utils.digestToStr(rcv_md5sum));
 
         so_read(cd_sd, (unsigned char*)&rcv_dataSize, sizeof(int64_t));
-        printf("Data Size : %ld\n"  , i64toLong(rcv_dataSize));
+        DEBUG("Data Size : %ld\n", i64toLong(rcv_dataSize));
 
         so_read(cd_sd, rcv_buffer, rcv_dataSize);
         // hex_dump((char*)rcv_buffer,200);
@@ -147,7 +147,7 @@ void MhProtoClient::DownloadFileFromServer(
             exit(1);
         }
         if (pid_[i] == 0) {
-            printf("Create download fork()\n");
+            DEBUG("Create download fork()\n");
             main_proc_ = false;
             DownloadFileFromServer(client_sd_[i], metaFile, localFile);
             close(client_sd_[i]);
@@ -156,7 +156,7 @@ void MhProtoClient::DownloadFileFromServer(
     }
 
     for (int i = 0 ; i < numClient_ ; i++) {
-        printf("Wait for pid : %d\n", pid_[i]);
+        DEBUG("Wait for pid : %d\n", pid_[i]);
         waitpid(pid_[i], NULL, 0);
     }
 

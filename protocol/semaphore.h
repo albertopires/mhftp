@@ -25,6 +25,7 @@
 #include <sys/sem.h>
 #include <errno.h>
 #include <stdint.h>
+#include "../tools.h"
 
 #if defined(__GNU_LIBRARY__) && !defined(_SEM_SEMUN_UNDEFINED)
 /** union semun is defined by including <sys/sem.h> */
