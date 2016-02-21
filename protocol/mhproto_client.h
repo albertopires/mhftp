@@ -29,8 +29,10 @@ class MhProtoClient {
     int *client_sd_;  // Array of client sockets
     int numClient_;   // Number of client sockets
     int pid_[NPROC];
+    int monitor_pid_;
     int kill_proc_;
     bool main_proc_;
+    bool verbose_;
 
     ChunkInfo *chunkInfo;
     Metadata metadata_;
@@ -44,7 +46,7 @@ class MhProtoClient {
     void createError(const char *file);
 
  public:
-    MhProtoClient(int *sd , int numClient);
+    MhProtoClient(int *sd , int numClient, bool verbose);
     void SndCmd(int cd_sd , unsigned char cmd);
     const char *getFileName(void);
     const char *getFileDesc(void);
