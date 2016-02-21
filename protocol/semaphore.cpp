@@ -19,7 +19,7 @@
 /** init: 1 create a new semaphore, 0 use an existing one.
   */
 Semaphore::Semaphore(int init) {
-    printf("Semaphore::Constructor\n");
+    DEBUG("Semaphore::Constructor\n");
 
     error_   = 0;
     init_id_ = 1237;
@@ -46,7 +46,7 @@ Semaphore::Semaphore(int init) {
 }
 
 Semaphore::~Semaphore(void) {
-    printf("Semaphore::Destructor\n");
+    DEBUG("Semaphore::Destructor\n");
     del_semvalue();
 }
 
