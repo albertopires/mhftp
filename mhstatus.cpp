@@ -94,8 +94,7 @@ void displayData(const char* controlFile, int verbose) {
     if (verbose) {
         metadata.DisplayControlDataMD5(controlFile);
         cout << endl;
-    }
-    else {
+    } else {
         metadata.DisplayControlData(controlFile);
         cout << endl;
     }

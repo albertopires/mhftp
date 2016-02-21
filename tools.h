@@ -48,8 +48,8 @@
 #define LC_CYAN    "\033[1;36m"
 #define LC_WHITE   "\033[1;37m"
 
-#define ANSI_SC "\033[s" //  ANSI Save cursor position
-#define ANSI_RC "\033[u" //  ANSI Restore cursort position
+#define ANSI_SC "\033[s"  // ANSI Save cursor position
+#define ANSI_RC "\033[u"  // ANSI Restore cursort position
 
 using std::cout;
 using std::endl;

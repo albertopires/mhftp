@@ -192,7 +192,6 @@ void MhProtoClient::DownloadFileFromServer(
     if (memcmp(metadata_.getDigest(), md5download.getDigest(), 16) != 0) {
         cout << "Downloaded file is corrupted." << endl;
     }
-
 }
 
 //  public
