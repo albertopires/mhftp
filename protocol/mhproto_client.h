@@ -22,7 +22,6 @@
 class MhProtoClient {
  private:
     const char *file_name_;
-    const char *file_desc_;
     const char *meta_file_;
     MD5Utils md5utils_;
     int sd_;          // Socket Descriptor
@@ -47,7 +46,6 @@ class MhProtoClient {
     MhProtoClient(int *sd , int numClient);
     void SndCmd(int cd_sd , unsigned char cmd);
     const char *getFileName(void);
-    const char *getFileDesc(void);
     void DownloadFileFromServer(const char *metaFile, const char *localFile);
     void DownloadMetadataFromServer(int smd, const char *remote_file);
     void KillClient(void);

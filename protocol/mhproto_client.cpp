@@ -126,10 +126,6 @@ const char *MhProtoClient::getFileName(void) {
     return file_name_;
 }
 
-const char *MhProtoClient::getFileDesc(void) {
-    return file_desc_;
-}
-
 //  Public
 void MhProtoClient::DownloadFileFromServer(
         const char *metaFile,
@@ -232,7 +228,6 @@ void MhProtoClient::KillClient(void) {
 }
 
 MhProtoClient::~MhProtoClient(void) {
-    if (file_desc_ != NULL)
-        free(const_cast<char*>(file_desc_));
+    DEBUG("MhProtoClient::Destructor\n");
     delete sem_;
 }
