@@ -29,7 +29,9 @@ class MhProtoClient {
     int numClient_;   // Number of client sockets
     int pid_[NPROC];
     int monitor_pid_;
-    int kill_proc_;
+    int *kill_proc_;
+    int shmid_;
+    int shm_key_;
     bool main_proc_;
     bool verbose_;
 
@@ -43,6 +45,8 @@ class MhProtoClient {
         const char *localFile);
     void RequestChunk(int cd_sd , int64_t chunkNumber);
     void createError(const char *file);
+    void CreateSharedMemory(void);
+    void DestroySharedMemory(void);
 
  public:
     MhProtoClient(int *sd , int numClient, bool verbose);

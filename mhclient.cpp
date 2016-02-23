@@ -126,4 +126,6 @@ void sig_handler(int signo) {
     if (signo == SIGINT)
         printf("Stopping...\n");
     mhProto->KillClient();
+
+    delete mhProto;
 }
