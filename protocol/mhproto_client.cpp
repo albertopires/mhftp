@@ -26,8 +26,6 @@ void MhProtoClient::DownloadFileFromServer(
     int64_t rcv_dataSize;
     MD5Utils md5Utils;
 
-    meta_file_ = metaFile;
-
     SndCmd(cd_sd, DOWNLOAD_CHUNK);
 
     metadata_.LoadMetadata(metaFile);
@@ -77,9 +75,9 @@ void MhProtoClient::DownloadFileFromServer(
         metadata_.setChunkStatus(chunkNumber, CH_OK, rcv_md5sum);
         metadata_.updateControlData(metaFile);
         sem_->semaphore_release_lock();
-    } while (chunkNumber != -1 && kill_proc_ == 0);
+    } while (chunkNumber != -1 && *kill_proc_ == 0);
     close(fd_download);
-    printf("Process: no more chunks to download.\n");
+    DEBUG("Process: no more chunks to download.\n");
 }
 
 void MhProtoClient::RequestChunk(int cd_sd , int64_t chunkNumber) {
@@ -107,14 +105,38 @@ void MhProtoClient::createError(const char *file) {
     close(fd);
 }
 
+void MhProtoClient::CreateSharedMemory(void) {
+    unsigned int seed = getpid();
+    shm_key_ = 1234;
+    int shm_size = sizeof(int);
+    do {
+        shmid_ = shmget(shm_key_, shm_size, 0611 | IPC_CREAT | IPC_EXCL);
+        if (shmid_ == -1) shm_key_ = rand_r(&seed);
+    } while ((errno == EEXIST) && (shmid_ == -1));
+    kill_proc_ = static_cast<int*>(shmat(shmid_, NULL, 0));
+    if (kill_proc_ == reinterpret_cast<void*>(-1)) {
+        printf("MhProtoClient::createShareMemory - shmat failed\n");
+        exit(1);
+    }
+}
+
+void MhProtoClient::DestroySharedMemory(void) {
+    if (shmdt(kill_proc_) == -1) {
+        printf("DestroySharedMemory - shmdt failed.\n");
+    }
+    if (shmctl(shmid_, IPC_RMID, 0) == -1) {
+        printf("DestroySharedMemory - shmctl(IPC_RMID) failed.\n");
+    }
+}
 
 // Public Methods
 MhProtoClient::MhProtoClient(int *sd , int numClient, bool verbose) {
     // Constructor
     sem_ = new Semaphore(1);
+    CreateSharedMemory();
     client_sd_ = sd;
     numClient_ = numClient;
-    kill_proc_ = 0;
+    *kill_proc_ = 0;
     main_proc_ = true;
     verbose_   = verbose;
     if (is_debug_enabled()) verbose_ = false;
@@ -132,6 +154,8 @@ const char *MhProtoClient::getFileName(void) {
 void MhProtoClient::DownloadFileFromServer(
         const char *metaFile,
         const char *localFile) {
+    meta_file_ = metaFile;
+
     metadata_.LoadMetadata(metaFile);
     metadata_.setInUse(1);
     metadata_.saveMetadata(metaFile);
@@ -145,6 +169,7 @@ void MhProtoClient::DownloadFileFromServer(
             exit(1);
         }
         if (pid_[i] == 0) {
+            signal(SIGINT, SIG_IGN);
             DEBUG("Create download fork()\n");
             main_proc_ = false;
             DownloadFileFromServer(client_sd_[i], metaFile, localFile);
@@ -154,18 +179,21 @@ void MhProtoClient::DownloadFileFromServer(
     }
 
     if (verbose_) {
+        DEBUG("Verbose\n");
         monitor_pid_ = fork();
         if (monitor_pid_== 0) {
+            signal(SIGINT, SIG_IGN);
             char in_use = 1;
-            while (in_use == 1) {
+            while (in_use == 1 && *kill_proc_ == 0) {
                 in_use = metadata_.getInUse();
                 printf("%s", ANSI_SC);
                 metadata_.DisplayControlData();
                 metadata_.LoadMetadata(metaFile);
                 printf("\n");
-                if (in_use == 1) printf("%s", ANSI_RC);
+                if (in_use == 1 && *kill_proc_ == 0) printf("%s", ANSI_RC);
                 sleep(1);
             }
+            printf("\n");
             exit(0);
         }
     }
@@ -174,6 +202,7 @@ void MhProtoClient::DownloadFileFromServer(
         DEBUG("Wait for pid : %d\n", pid_[i]);
         waitpid(pid_[i], NULL, 0);
     }
+    DEBUG("After Wait for pid......\n");
 
     metadata_.LoadMetadata(metaFile);
     metadata_.setInUse(0);
@@ -230,26 +259,44 @@ void MhProtoClient::DownloadMetadataFromServer(int smd,
 }
 
 void MhProtoClient::KillClient(void) {
-    kill_proc_++;
+    if (main_proc_) {
+        (*kill_proc_)++;
 
-    if (main_proc_ && kill_proc_ > 1) {
-        if (verbose_) kill(monitor_pid_, SIGKILL);
-        const char *metaStatus = meta_file_ == NULL ? "null" : "Not NULL";
-        DEBUG("My pid : %d - meta_file_ : <%s>" , getpid(), metaStatus);
-        DEBUG("  Main : %d\n", main_proc_);
-
-        for (int i = 0 ; i < numClient_ ; i++) {
-            DEBUG("Kill Pid : %d\n" , pid_[i]);
-            kill(pid_[i], SIGKILL);
+        if (*kill_proc_ == 1) {
+            DEBUG("Wait for %d processes to finish.\n", numClient_);
+            for (int i = 0 ; i < numClient_ ; i++) {
+                DEBUG("Wait for pid(k) : %d\n", pid_[i]);
+                waitpid(pid_[i], NULL, 0);
+            }
+            if (verbose_) {
+                DEBUG("Wait pid monitor\n");
+                waitpid(monitor_pid_, NULL, 0);
+            }
         }
+
+        if (*kill_proc_ > 1) {
+            if (verbose_) kill(monitor_pid_, SIGKILL);
+            const char *metaStatus = meta_file_ == NULL ? "null" : "Not NULL";
+            DEBUG("My pid : %d - meta_file_ : <%s>" , getpid(), metaStatus);
+            DEBUG("  Main : %d\n", main_proc_);
+
+            for (int i = 0 ; i < numClient_ ; i++) {
+                DEBUG("Kill Pid : %d\n" , pid_[i]);
+                kill(pid_[i], SIGKILL);
+            }
+        }
+
+        if (meta_file_ == NULL) return;
+        metadata_.resetDownloadingChunks(meta_file_, 1);
     }
+}
 
-    if (meta_file_ == NULL) return;
-
-    metadata_.resetDownloadingChunks(meta_file_, 1);
+int MhProtoClient::getKillProc(void) {
+    return *kill_proc_;
 }
 
 MhProtoClient::~MhProtoClient(void) {
     DEBUG("MhProtoClient::Destructor\n");
     delete sem_;
+    DestroySharedMemory();
 }
