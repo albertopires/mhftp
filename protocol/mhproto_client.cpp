@@ -26,8 +26,6 @@ void MhProtoClient::DownloadFileFromServer(
     int64_t rcv_dataSize;
     MD5Utils md5Utils;
 
-    meta_file_ = metaFile;
-
     SndCmd(cd_sd, DOWNLOAD_CHUNK);
 
     metadata_.LoadMetadata(metaFile);
@@ -156,6 +154,8 @@ const char *MhProtoClient::getFileName(void) {
 void MhProtoClient::DownloadFileFromServer(
         const char *metaFile,
         const char *localFile) {
+    meta_file_ = metaFile;
+
     metadata_.LoadMetadata(metaFile);
     metadata_.setInUse(1);
     metadata_.saveMetadata(metaFile);
@@ -184,15 +184,16 @@ void MhProtoClient::DownloadFileFromServer(
         if (monitor_pid_== 0) {
             signal(SIGINT, SIG_IGN);
             char in_use = 1;
-            while (in_use == 1) {
+            while (in_use == 1 && *kill_proc_ == 0) {
                 in_use = metadata_.getInUse();
                 printf("%s", ANSI_SC);
                 metadata_.DisplayControlData();
                 metadata_.LoadMetadata(metaFile);
                 printf("\n");
-                if (in_use == 1) printf("%s", ANSI_RC);
+                if (in_use == 1 && *kill_proc_ == 0) printf("%s", ANSI_RC);
                 sleep(1);
             }
+            printf("\n");
             exit(0);
         }
     }
@@ -220,7 +221,6 @@ void MhProtoClient::DownloadFileFromServer(
     if (memcmp(metadata_.getDigest(), md5download.getDigest(), 16) != 0) {
         cout << "Downloaded file is corrupted." << endl;
     }
-    *kill_proc_ = 2;
 }
 
 //  public
@@ -262,6 +262,18 @@ void MhProtoClient::KillClient(void) {
     if (main_proc_) {
         (*kill_proc_)++;
 
+        if (*kill_proc_ == 1) {
+            DEBUG("Wait for %d processes to finish.\n", numClient_);
+            for (int i = 0 ; i < numClient_ ; i++) {
+                DEBUG("Wait for pid(k) : %d\n", pid_[i]);
+                waitpid(pid_[i], NULL, 0);
+            }
+            if (verbose_) {
+                DEBUG("Wait pid monitor\n");
+                waitpid(monitor_pid_, NULL, 0);
+            }
+        }
+
         if (*kill_proc_ > 1) {
             if (verbose_) kill(monitor_pid_, SIGKILL);
             const char *metaStatus = meta_file_ == NULL ? "null" : "Not NULL";
@@ -274,14 +286,13 @@ void MhProtoClient::KillClient(void) {
             }
         }
 
-        while (*kill_proc_ < 2) {
-            DEBUG("Wait for pids to finish... %d\n", *kill_proc_);
-            sleep(1);
-        }
-
         if (meta_file_ == NULL) return;
         metadata_.resetDownloadingChunks(meta_file_, 1);
     }
+}
+
+int MhProtoClient::getKillProc(void) {
+    return *kill_proc_;
 }
 
 MhProtoClient::~MhProtoClient(void) {

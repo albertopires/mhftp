@@ -55,6 +55,7 @@ class MhProtoClient {
     void DownloadFileFromServer(const char *metaFile, const char *localFile);
     void DownloadMetadataFromServer(int smd, const char *remote_file);
     void KillClient(void);
+    int getKillProc(void);
     ~MhProtoClient(void);
 };
 

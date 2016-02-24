@@ -58,13 +58,15 @@ int main(int argc, char *argv[]) {
         exit(0);
     }
 
-    sa.sa_handler = &sig_handler;
-    sa.sa_flags = SA_RESTART;
+    sa.sa_handler = sig_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_NODEFER;
 
     if (sigaction(SIGINT, &sa, NULL) == -1) {
           printf("\ncan't catch SIGINT\n");
           exit(0);
     }
+    signal(SIGCHLD, SIG_IGN);
 
     int hosts_index = 2;
 
@@ -76,11 +78,11 @@ int main(int argc, char *argv[]) {
     n_hosts = argc - hosts_index;
     sds = static_cast<int*>(malloc(n_hosts*sizeof(int)));
 
-    printf("Number of server connections : %d\n" , n_hosts);
+    DEBUG("Number of server connections : %d\n" , n_hosts);
     for (int i = hosts_index ; i < argc ; i++) {
         HostPort(argv[i], host, &port);
-        printf("Host : <%s>\n", host);
-        printf("Port : %d\n", port);
+        DEBUG("Host : <%s>\n", host);
+        DEBUG("Port : %d\n", port);
 
         sd = tcp_connect(host, port);
         if (sd == -1) {
@@ -113,7 +115,6 @@ int main(int argc, char *argv[]) {
 
 void HostPort(const char *hostPortStr, char *host, int *port) {
     string s(hostPortStr);
-    cout << s << endl;
     int pos = s.find(":");
     string s_host = string(s, 0, pos);
     string s_port = string(s, ++pos);
@@ -128,4 +129,6 @@ void sig_handler(int signo) {
     mhProto->KillClient();
 
     delete mhProto;
+
+    exit(0);
 }
