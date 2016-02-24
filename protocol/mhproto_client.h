@@ -28,8 +28,12 @@ class MhProtoClient {
     int *client_sd_;  // Array of client sockets
     int numClient_;   // Number of client sockets
     int pid_[NPROC];
-    int kill_proc_;
+    int monitor_pid_;
+    int *kill_proc_;
+    int shmid_;
+    int shm_key_;
     bool main_proc_;
+    bool verbose_;
 
     ChunkInfo *chunkInfo;
     Metadata metadata_;
@@ -41,14 +45,17 @@ class MhProtoClient {
         const char *localFile);
     void RequestChunk(int cd_sd , int64_t chunkNumber);
     void createError(const char *file);
+    void CreateSharedMemory(void);
+    void DestroySharedMemory(void);
 
  public:
-    MhProtoClient(int *sd , int numClient);
+    MhProtoClient(int *sd , int numClient, bool verbose);
     void SndCmd(int cd_sd , unsigned char cmd);
     const char *getFileName(void);
     void DownloadFileFromServer(const char *metaFile, const char *localFile);
     void DownloadMetadataFromServer(int smd, const char *remote_file);
     void KillClient(void);
+    int getKillProc(void);
     ~MhProtoClient(void);
 };
 

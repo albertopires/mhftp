@@ -46,6 +46,7 @@ int main(int argc, char *argv[]) {
     int  port;
     char file_name[2048];
     char meta_name[2048];
+    bool verbose = false;
 
     printf("MhClient %s\n\n", VER);
 
@@ -57,35 +58,44 @@ int main(int argc, char *argv[]) {
         exit(0);
     }
 
-    sa.sa_handler = &sig_handler;
-    sa.sa_flags = SA_RESTART;
+    sa.sa_handler = sig_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_NODEFER;
 
     if (sigaction(SIGINT, &sa, NULL) == -1) {
           printf("\ncan't catch SIGINT\n");
           exit(0);
     }
+    signal(SIGCHLD, SIG_IGN);
 
-    n_hosts = argc -2;
+    int hosts_index = 2;
+
+    if (strcmp(argv[1], "-v") == 0) {
+        hosts_index++;
+        verbose = true;
+    }
+
+    n_hosts = argc - hosts_index;
     sds = static_cast<int*>(malloc(n_hosts*sizeof(int)));
 
-    printf("Number of server connections : %d\n" , n_hosts);
-    for (int i = 2 ; i < argc ; i++) {
+    DEBUG("Number of server connections : %d\n" , n_hosts);
+    for (int i = hosts_index ; i < argc ; i++) {
         HostPort(argv[i], host, &port);
-        printf("Host : <%s>\n", host);
-        printf("Port : %d\n", port);
+        DEBUG("Host : <%s>\n", host);
+        DEBUG("Port : %d\n", port);
 
         sd = tcp_connect(host, port);
         if (sd == -1) {
             perror("client ");
             exit(1);
         }
-        sds[i-2] = sd;
+        sds[i-hosts_index] = sd;
     }
 
-    mhProto = new MhProtoClient(sds, n_hosts);
+    mhProto = new MhProtoClient(sds, n_hosts, verbose);
 
     // Generate Metadata and Local file name.
-    CopyString(file_name, AbsoluteFile(argv[1]));
+    CopyString(file_name, AbsoluteFile(argv[hosts_index-1]));
     CopyString(meta_name, file_name);
     StrCat(meta_name, METADATA_EXT);
     DEBUG("Local File : <%s>\n", file_name);
@@ -93,7 +103,7 @@ int main(int argc, char *argv[]) {
 
     // If needed, download Metadata file from server.
     if (!file_exists(meta_name))
-        mhProto->DownloadMetadataFromServer(sds[0], argv[1]);
+        mhProto->DownloadMetadataFromServer(sds[0], argv[hosts_index-1]);
 
     mhProto->DownloadFileFromServer(meta_name, file_name);
 
@@ -105,7 +115,6 @@ int main(int argc, char *argv[]) {
 
 void HostPort(const char *hostPortStr, char *host, int *port) {
     string s(hostPortStr);
-    cout << s << endl;
     int pos = s.find(":");
     string s_host = string(s, 0, pos);
     string s_port = string(s, ++pos);
@@ -118,4 +127,8 @@ void sig_handler(int signo) {
     if (signo == SIGINT)
         printf("Stopping...\n");
     mhProto->KillClient();
+
+    delete mhProto;
+
+    exit(0);
 }

@@ -78,9 +78,9 @@ class Metadata {
     const unsigned char* getDigest(void);
     void LoadMetadata(const char* fileMetadata);
     void saveMetadata(const char* fileMetadata);
-    void displayControlData(const char* metaFile);
-    void displayControlDataMD5(const char* metaFile);
-    void displayControlData(void);
+    void DisplayControlData(const char* metaFile);
+    void DisplayControlDataMD5(const char* metaFile);
+    void DisplayControlData(void);
     int64_t getNextPendingChunk(void);
     void setChunkStatus(
         int64_t chunkNumber,

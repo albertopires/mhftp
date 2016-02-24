@@ -3,8 +3,8 @@ CC=g++
 CFLAGS=-Wall -Wextra -g -pedantic -std=c++11
 CRYPT_DIR=./crypt
 PROTO_DIR=./protocol
-VERS='"v1.0.0a - 23/February/2016"'
-LINK_OPTS=-lcrypto #-lefence 
+VERS='"v1.0.1 - 23/February/2016"'
+LINK_OPTS=-lcrypto -lefence
 
 all: mhftp mhclient initFile mhstatus
 
