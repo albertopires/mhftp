@@ -67,7 +67,7 @@ void MhProtoClient::DownloadFileFromServer(
 
         so_read(cd_sd, rcv_buffer, rcv_dataSize);
         // hex_dump((char*)rcv_buffer,200);
-        int filePos = (chunkNumber*metadata_.getChunkSize());
+        off_t filePos = (chunkNumber*metadata_.getChunkSize());
         lseek(fd_download, filePos, SEEK_SET);
         write(fd_download, rcv_buffer, rcv_dataSize);
 
