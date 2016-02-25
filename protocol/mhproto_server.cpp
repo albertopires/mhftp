@@ -62,7 +62,7 @@ void MhProtoServer::SendChunkToClient(void) {
             break;
         }
 
-        int filePos = (chunkNumber*metadata_.getChunkSize());
+        off_t filePos = (chunkNumber*metadata_.getChunkSize());
         lseek(fd, filePos , SEEK_SET);
         chunk = LoadChunkFromFile(fd, payLoadArray[chunkNumber]);
         DEBUG("MhProtoServer::sendChunkToClient : ");
@@ -72,6 +72,8 @@ void MhProtoServer::SendChunkToClient(void) {
         int64_t dataSize = chunk->getDataSize();
         write(sd_, &dataSize, sizeof(int64_t));
         write(sd_, chunk->getData(), dataSize);
+
+        if (chunk != NULL) delete chunk;
     }
 
     close(fd);

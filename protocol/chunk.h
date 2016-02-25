@@ -36,6 +36,7 @@ class Chunk {
     unsigned char *getMD5Sum(void);
     void generateCheckSum(void);
     int64_t getDataSize(void);
+    ~Chunk(void);
 };
 
 #endif  // PROTOCOL_CHUNK_H_

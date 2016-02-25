@@ -28,6 +28,10 @@ Chunk::Chunk(int64_t size) {
     }
 }
 
+Chunk::~Chunk(void) {
+    if (data_ != NULL) free(data_);
+}
+
 unsigned char* Chunk::getData(void) {
     return data_;
 }

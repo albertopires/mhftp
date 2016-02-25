@@ -21,10 +21,11 @@ void MhProtoClient::DownloadFileFromServer(
         int cd_sd,
         const char *metaFile,
         const char *localFile) {
-    unsigned char rcv_buffer[1024*1024*2];
+    unsigned char *rcv_buffer = NULL;
     unsigned char rcv_md5sum[16];
     int64_t rcv_dataSize;
     MD5Utils md5Utils;
+    rcv_buffer = static_cast<unsigned char*>(malloc(1024*1024*20));
 
     SndCmd(cd_sd, DOWNLOAD_CHUNK);
 
@@ -66,7 +67,7 @@ void MhProtoClient::DownloadFileFromServer(
 
         so_read(cd_sd, rcv_buffer, rcv_dataSize);
         // hex_dump((char*)rcv_buffer,200);
-        int filePos = (chunkNumber*metadata_.getChunkSize());
+        off_t filePos = (chunkNumber*metadata_.getChunkSize());
         lseek(fd_download, filePos, SEEK_SET);
         write(fd_download, rcv_buffer, rcv_dataSize);
 
@@ -77,6 +78,7 @@ void MhProtoClient::DownloadFileFromServer(
         sem_->semaphore_release_lock();
     } while (chunkNumber != -1 && *kill_proc_ == 0);
     close(fd_download);
+    if (rcv_buffer != NULL) free(rcv_buffer);
     DEBUG("Process: no more chunks to download.\n");
 }
 

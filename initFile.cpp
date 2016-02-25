@@ -23,7 +23,7 @@
 #include "./tools.h"
 #include "./protocol/metadata.h"
 
-void createMetaData(char *fileName , int *chunk_size_ptr);
+void createMetaData(char *fileName , int64_t *chunk_size_ptr);
 void showMetaData(const char* fileMetaData);
 
 int main(int argc , char *argv[]) {
@@ -37,7 +37,7 @@ int main(int argc , char *argv[]) {
     }
 
     if (strcmp("create", argv[1]) == 0) {
-        int chunk_size = (argc == 4 ? atoi(argv[3]) : 0);
+        int64_t chunk_size = (argc == 4 ? atoll(argv[3]) : 0);
         createMetaData(argv[2], chunk_size != 0 ? &chunk_size : NULL);
     }
 
@@ -48,8 +48,8 @@ int main(int argc , char *argv[]) {
     exit(0);
 }
 
-void createMetaData(char *fileName , int *chunk_size_ptr) {
-    int chunk_size = CHUNK_SIZE;
+void createMetaData(char *fileName , int64_t *chunk_size_ptr) {
+    int64_t chunk_size = CHUNK_SIZE;
     Metadata metaData;
 
     if (chunk_size_ptr != NULL) {
