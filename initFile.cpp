@@ -38,6 +38,12 @@ int main(int argc , char *argv[]) {
 
     if (strcmp("create", argv[1]) == 0) {
         int64_t chunk_size = (argc == 4 ? atoll(argv[3]) : 0);
+
+        if (chunk_size > MAX_CHUNK_SIZE) {
+            cout << "Error: chunk size can be bigger than ";
+            cout << MAX_CHUNK_SIZE << "." << endl;
+            exit(1);
+        }
         createMetaData(argv[2], chunk_size != 0 ? &chunk_size : NULL);
     }
 

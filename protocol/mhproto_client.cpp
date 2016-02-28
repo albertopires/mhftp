@@ -25,7 +25,7 @@ void MhProtoClient::DownloadFileFromServer(
     unsigned char rcv_md5sum[16];
     int64_t rcv_dataSize;
     MD5Utils md5Utils;
-    rcv_buffer = static_cast<unsigned char*>(malloc(1024*1024*20));
+    rcv_buffer = static_cast<unsigned char*>(malloc(MAX_CHUNK_SIZE));
 
     SndCmd(cd_sd, DOWNLOAD_CHUNK);
 
