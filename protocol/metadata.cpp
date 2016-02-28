@@ -172,13 +172,14 @@ void Metadata::StoreMetadata(
     fileSize_ = fileStat.st_size;
 
     //  Write metadata header to file
-    write(fd , fileFull   , sizeof(fileFull));    // 2048
-    write(fd , &fileSize_ , sizeof(fileSize_));   // 8
-    write(fd , &chunkSize , sizeof(chunkSize));   // 8
-    write(fd , &chunks  , sizeof(chunks));        // 8
-    write(fd , digest_  , DIGEST_SIZE);           // 16
-    write(fd , &in_use_ , 1);                     // 1 - Total = 2081
-    // Don't forget to see if HEADER_SIZE == 2089
+    write(fd, HEADER_SIG , SIG_HDR_SIZE);        // 14
+    write(fd, fileFull   , sizeof(fileFull));    // 2048
+    write(fd, &fileSize_ , sizeof(fileSize_));   // 8
+    write(fd, &chunkSize , sizeof(chunkSize));   // 8
+    write(fd, &chunks  , sizeof(chunks));        // 8
+    write(fd, digest_  , DIGEST_SIZE);           // 16
+    write(fd, &in_use_ , 1);                     // 1 - Total = 2103
+    // Don't forget to see if HEADER_SIZE == 2103
     writeControlData(fd);
     close(fd);
 }
@@ -191,6 +192,7 @@ void Metadata::showChunkError(int64_t i) {
 //  Public Methods
 //
 void Metadata::LoadMetadata(const char* fileMetadata) {
+    char header_sig[15];
     chunkSize_ = -1;
     chunks_ = -1;
     memset(fileFull_ , 0 , sizeof(fileFull_));
@@ -201,12 +203,19 @@ void Metadata::LoadMetadata(const char* fileMetadata) {
         exit(1);
     }
 
-    read(fd , fileFull_   , sizeof(fileFull_));
-    read(fd , &fileSize_  , sizeof(fileSize_));
-    read(fd , &chunkSize_ , sizeof(chunkSize_));
-    read(fd , &chunks_    , sizeof(chunks_));
-    read(fd , digest_     , 16);
-    read(fd , &in_use_    , 1);
+    memset(header_sig, 0, sizeof(header_sig));
+
+    read(fd, header_sig  , SIG_HDR_SIZE);
+    if (strncmp(header_sig, HEADER_SIG, SIG_HDR_SIZE) != 0) {
+        cout << "Invalid metadata file." << endl;
+        exit(1);
+    }
+    read(fd, fileFull_   , sizeof(fileFull_));
+    read(fd, &fileSize_  , sizeof(fileSize_));
+    read(fd, &chunkSize_ , sizeof(chunkSize_));
+    read(fd, &chunks_    , sizeof(chunks_));
+    read(fd, digest_     , 16);
+    read(fd, &in_use_    , 1);
     // Read Chunk Info
 
     int chunkArraySize = sizeof(struct ChunkInfo)*getChunks();
@@ -223,12 +232,13 @@ void Metadata::saveMetadata(const char* fileMetadata) {
         exit(1);
     }
 
-    write(fd , fileFull_   , sizeof(fileFull_));
-    write(fd , &fileSize_  , sizeof(fileSize_));
-    write(fd , &chunkSize_ , sizeof(chunkSize_));
-    write(fd , &chunks_    , sizeof(chunks_));
-    write(fd , digest_     , 16);
-    write(fd , &in_use_    , 1);
+    write(fd, HEADER_SIG , SIG_HDR_SIZE);
+    write(fd, fileFull_   , sizeof(fileFull_));
+    write(fd, &fileSize_  , sizeof(fileSize_));
+    write(fd, &chunkSize_ , sizeof(chunkSize_));
+    write(fd, &chunks_    , sizeof(chunks_));
+    write(fd, digest_     , 16);
+    write(fd, &in_use_    , 1);
 
     int64_t chunkArraySize = sizeof(struct ChunkInfo)*getChunks();
     write(fd, chunkInfo_, chunkArraySize);
@@ -427,7 +437,7 @@ void Metadata::CheckDataChunks(const char* metaFile, const char *fileName) {
     }
 }
 
-void Metadata::writeMetadataHeader(int sd) {
+void Metadata::WriteMetadataHeader(int sd) {
     write(sd, digest_    , DIGEST_SIZE);
     write(sd, &fileSize_ , sizeof(fileSize_));
     write(sd, fileFull_  , FNAME_SIZE);
@@ -435,7 +445,7 @@ void Metadata::writeMetadataHeader(int sd) {
     write(sd, &chunks_   , sizeof(chunks_));
 }
 
-void Metadata::readMetadataHeader(int sd) {
+void Metadata::ReadMetadataHeader(int sd) {
     so_read(sd, digest_    , DIGEST_SIZE);
     so_read(sd, &fileSize_ , sizeof(fileSize_));
     so_read(sd, fileFull_  , FNAME_SIZE);

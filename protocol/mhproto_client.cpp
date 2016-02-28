@@ -30,7 +30,7 @@ void MhProtoClient::DownloadFileFromServer(
     SndCmd(cd_sd, DOWNLOAD_CHUNK);
 
     metadata_.LoadMetadata(metaFile);
-    metadata_.writeMetadataHeader(cd_sd);
+    metadata_.WriteMetadataHeader(cd_sd);
 
     int fd_download = open(localFile , O_WRONLY | O_CREAT , 0000644);
     if (fd_download == -1) {
@@ -278,7 +278,7 @@ void MhProtoClient::DownloadMetadataFromServer(int smd,
     close(fd);
 
     Metadata metadata;
-    metadata.readMetadataHeader(smd);
+    metadata.ReadMetadataHeader(smd);
     metadata.initControlData();
     metadata.saveMetadata(abs_file);
 }
