@@ -25,7 +25,7 @@ void MhProtoClient::DownloadFileFromServer(
     unsigned char rcv_md5sum[16];
     int64_t rcv_dataSize;
     MD5Utils md5Utils;
-    rcv_buffer = static_cast<unsigned char*>(malloc(1024*1024*20));
+    rcv_buffer = static_cast<unsigned char*>(malloc(MAX_CHUNK_SIZE));
 
     SndCmd(cd_sd, DOWNLOAD_CHUNK);
 
@@ -39,6 +39,9 @@ void MhProtoClient::DownloadFileFromServer(
     }
 
     int64_t chunkNumber = -1;
+    int br = 0;
+    bool sock_error = false;
+    off_t filePos;
     do {
         DEBUG("Before lock : %ld - \033[1m\033[32m%d\033[0m\n",
                 i64toLong(chunkNumber),
@@ -59,21 +62,40 @@ void MhProtoClient::DownloadFileFromServer(
         RequestChunk(cd_sd, chunkNumber);
 
         DEBUG("Next Pending Chunk-v : %ld\n", i64toLong(chunkNumber));
-        so_read(cd_sd, rcv_md5sum, DIGEST_SIZE);
+
+        br = so_read(cd_sd, rcv_md5sum, DIGEST_SIZE);
         DEBUG("MD5       : <%s>\n", md5Utils.digestToStr(rcv_md5sum));
+        if (br != DIGEST_SIZE) {
+            sock_error = true;
+                goto update;
+        }
 
-        so_read(cd_sd, (unsigned char*)&rcv_dataSize, sizeof(int64_t));
+        br = so_read(cd_sd, (unsigned char*)&rcv_dataSize, sizeof(int64_t));
         DEBUG("Data Size : %ld\n", i64toLong(rcv_dataSize));
+        if (br != sizeof(int64_t)) {
+            sock_error = true;
+                goto update;
+        }
 
-        so_read(cd_sd, rcv_buffer, rcv_dataSize);
+        br = so_read(cd_sd, rcv_buffer, rcv_dataSize);
+        if (br != rcv_dataSize) {
+            sock_error = true;
+                goto update;
+        }
+
         // hex_dump((char*)rcv_buffer,200);
-        off_t filePos = (chunkNumber*metadata_.getChunkSize());
+        filePos = (chunkNumber*metadata_.getChunkSize());
         lseek(fd_download, filePos, SEEK_SET);
         write(fd_download, rcv_buffer, rcv_dataSize);
-
+update:
         sem_->semaphore_get_lock();
         metadata_.LoadMetadata(metaFile);
-        metadata_.setChunkStatus(chunkNumber, CH_OK, rcv_md5sum);
+        if (sock_error) {
+            metadata_.setChunkStatus(chunkNumber, CH_ERROR, rcv_md5sum);
+            chunkNumber = -1;
+        } else {
+            metadata_.setChunkStatus(chunkNumber, CH_OK, rcv_md5sum);
+        }
         metadata_.updateControlData(metaFile);
         sem_->semaphore_release_lock();
     } while (chunkNumber != -1 && *kill_proc_ == 0);
@@ -214,6 +236,7 @@ void MhProtoClient::DownloadFileFromServer(
 
     MD5Utils md5download;
     // createError(localFile);
+    printf("Checking md5, this may take some time...\n");
     md5download.md5File(localFile);
 
     cout << "End of Transfer:" << endl;

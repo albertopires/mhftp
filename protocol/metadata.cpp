@@ -108,6 +108,7 @@ void Metadata::create(
     printf("Chunk Size : %ld\n" , i64toLong(chunkSize));
     printf("Chunks     : %ld\n" , i64toLong(chunks));
 
+    printf("Generating md5, this may take some time...\n");
     md5utils.md5File(fd);
     memcpy(reinterpret_cast<char*>(digest_),
             reinterpret_cast<const char*>(md5utils.getDigest()), DIGEST_SIZE);
@@ -387,7 +388,7 @@ int Metadata::resetAllChunks(const char* metaFile, int force) {
     return 0;
 }
 
-void Metadata::checkDataChunks(const char* metaFile, const char *fileName) {
+void Metadata::CheckDataChunks(const char* metaFile, const char *fileName) {
     LoadMetadata(metaFile);
     cout << "Check Data" << endl;
     if (in_use_ != 0) {
@@ -402,12 +403,12 @@ void Metadata::checkDataChunks(const char* metaFile, const char *fileName) {
 
     unsigned char *buffer = static_cast<unsigned char*>(malloc(chunkSize_));
 
-    for (int i = 0 ; i < chunks_ ; i++) {
-        int cs = chunkInfo_[i].size;
+    for (int64_t i = 0 ; i < chunks_ ; i++) {
+        off_t cs = chunkInfo_[i].size;
         if (chunkInfo_[i].status == CH_OK) {
-            int br = read(fd, buffer, cs);
+            int64_t br = read(fd, buffer, cs);
             md5Utils_.md5Buffer(buffer, br);
-            printf("%s\n", md5Utils_.getDigestStr());
+            DEBUG("%s\n", md5Utils_.getDigestStr());
             if (memcmp(md5Utils_.getDigest(),chunkInfo_[i].md5sum, 16) != 0) { // NOLINT
                 chunkInfo_[i].status = CH_ERROR;
                 printf("Corrupted chunks:\n");
