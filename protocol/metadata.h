@@ -90,7 +90,7 @@ class Metadata {
     int64_t getChunkPayLoadSize(int64_t chunkNumber);
     void resetDownloadingChunks(const char* metaFile, int force);
     int resetAllChunks(const char* metaFile, int force);
-    void checkDataChunks(const char* metaFile, const char *fileName);
+    void CheckDataChunks(const char* metaFile, const char *fileName);
     void writeMetadataHeader(int sd);
     void readMetadataHeader(int sd);
 };

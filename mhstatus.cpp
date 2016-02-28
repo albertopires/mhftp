@@ -128,7 +128,7 @@ void resetMetaData(const char* controlFile, int force) {
 void checkChunkData(const char* controlFile, const char *fileName) {
     Metadata metadata;
 
-    metadata.checkDataChunks(controlFile, fileName);
+    metadata.CheckDataChunks(controlFile, fileName);
 
     exit(0);
 }
