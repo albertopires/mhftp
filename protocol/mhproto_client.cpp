@@ -214,6 +214,7 @@ void MhProtoClient::DownloadFileFromServer(
 
     MD5Utils md5download;
     // createError(localFile);
+    printf("Checking md5, this may take some time...\n");
     md5download.md5File(localFile);
 
     cout << "End of Transfer:" << endl;

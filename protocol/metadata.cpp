@@ -108,6 +108,7 @@ void Metadata::create(
     printf("Chunk Size : %ld\n" , i64toLong(chunkSize));
     printf("Chunks     : %ld\n" , i64toLong(chunks));
 
+    printf("Generating md5, this may take some time...\n");
     md5utils.md5File(fd);
     memcpy(reinterpret_cast<char*>(digest_),
             reinterpret_cast<const char*>(md5utils.getDigest()), DIGEST_SIZE);
