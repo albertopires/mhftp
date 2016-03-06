@@ -21,8 +21,9 @@
 #define MHFTP_NOCOLOR  "MHFTP_NOCOLOR"
 #define METADATA_EXT   ".mdata"
 
-#define DIGEST_SIZE 16
-#define FNAME_SIZE  2048
+#define DIGEST_SIZE    16
+#define FNAME_SIZE     2048
+#define MAX_CHUNK_SIZE 20971520  // 20 MB
 
 #define DEBUG(...) if (debug_enabled) { printf(__VA_ARGS__); }
 

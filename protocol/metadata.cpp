@@ -108,6 +108,7 @@ void Metadata::create(
     printf("Chunk Size : %ld\n" , i64toLong(chunkSize));
     printf("Chunks     : %ld\n" , i64toLong(chunks));
 
+    printf("Generating md5, this may take some time...\n");
     md5utils.md5File(fd);
     memcpy(reinterpret_cast<char*>(digest_),
             reinterpret_cast<const char*>(md5utils.getDigest()), DIGEST_SIZE);
@@ -171,13 +172,14 @@ void Metadata::StoreMetadata(
     fileSize_ = fileStat.st_size;
 
     //  Write metadata header to file
-    write(fd , fileFull   , sizeof(fileFull));    // 2048
-    write(fd , &fileSize_ , sizeof(fileSize_));   // 8
-    write(fd , &chunkSize , sizeof(chunkSize));   // 8
-    write(fd , &chunks  , sizeof(chunks));        // 8
-    write(fd , digest_  , DIGEST_SIZE);           // 16
-    write(fd , &in_use_ , 1);                     // 1 - Total = 2081
-    // Don't forget to see if HEADER_SIZE == 2089
+    write(fd, HEADER_SIG , SIG_HDR_SIZE);        // 14
+    write(fd, fileFull   , sizeof(fileFull));    // 2048
+    write(fd, &fileSize_ , sizeof(fileSize_));   // 8
+    write(fd, &chunkSize , sizeof(chunkSize));   // 8
+    write(fd, &chunks  , sizeof(chunks));        // 8
+    write(fd, digest_  , DIGEST_SIZE);           // 16
+    write(fd, &in_use_ , 1);                     // 1 - Total = 2103
+    // Don't forget to see if HEADER_SIZE == 2103
     writeControlData(fd);
     close(fd);
 }
@@ -190,6 +192,7 @@ void Metadata::showChunkError(int64_t i) {
 //  Public Methods
 //
 void Metadata::LoadMetadata(const char* fileMetadata) {
+    char header_sig[15];
     chunkSize_ = -1;
     chunks_ = -1;
     memset(fileFull_ , 0 , sizeof(fileFull_));
@@ -200,12 +203,19 @@ void Metadata::LoadMetadata(const char* fileMetadata) {
         exit(1);
     }
 
-    read(fd , fileFull_   , sizeof(fileFull_));
-    read(fd , &fileSize_  , sizeof(fileSize_));
-    read(fd , &chunkSize_ , sizeof(chunkSize_));
-    read(fd , &chunks_    , sizeof(chunks_));
-    read(fd , digest_     , 16);
-    read(fd , &in_use_    , 1);
+    memset(header_sig, 0, sizeof(header_sig));
+
+    read(fd, header_sig  , SIG_HDR_SIZE);
+    if (strncmp(header_sig, HEADER_SIG, SIG_HDR_SIZE) != 0) {
+        cout << "Invalid metadata file." << endl;
+        exit(1);
+    }
+    read(fd, fileFull_   , sizeof(fileFull_));
+    read(fd, &fileSize_  , sizeof(fileSize_));
+    read(fd, &chunkSize_ , sizeof(chunkSize_));
+    read(fd, &chunks_    , sizeof(chunks_));
+    read(fd, digest_     , 16);
+    read(fd, &in_use_    , 1);
     // Read Chunk Info
 
     int chunkArraySize = sizeof(struct ChunkInfo)*getChunks();
@@ -222,12 +232,13 @@ void Metadata::saveMetadata(const char* fileMetadata) {
         exit(1);
     }
 
-    write(fd , fileFull_   , sizeof(fileFull_));
-    write(fd , &fileSize_  , sizeof(fileSize_));
-    write(fd , &chunkSize_ , sizeof(chunkSize_));
-    write(fd , &chunks_    , sizeof(chunks_));
-    write(fd , digest_     , 16);
-    write(fd , &in_use_    , 1);
+    write(fd, HEADER_SIG , SIG_HDR_SIZE);
+    write(fd, fileFull_   , sizeof(fileFull_));
+    write(fd, &fileSize_  , sizeof(fileSize_));
+    write(fd, &chunkSize_ , sizeof(chunkSize_));
+    write(fd, &chunks_    , sizeof(chunks_));
+    write(fd, digest_     , 16);
+    write(fd, &in_use_    , 1);
 
     int64_t chunkArraySize = sizeof(struct ChunkInfo)*getChunks();
     write(fd, chunkInfo_, chunkArraySize);
@@ -387,7 +398,7 @@ int Metadata::resetAllChunks(const char* metaFile, int force) {
     return 0;
 }
 
-void Metadata::checkDataChunks(const char* metaFile, const char *fileName) {
+void Metadata::CheckDataChunks(const char* metaFile, const char *fileName) {
     LoadMetadata(metaFile);
     cout << "Check Data" << endl;
     if (in_use_ != 0) {
@@ -402,12 +413,12 @@ void Metadata::checkDataChunks(const char* metaFile, const char *fileName) {
 
     unsigned char *buffer = static_cast<unsigned char*>(malloc(chunkSize_));
 
-    for (int i = 0 ; i < chunks_ ; i++) {
-        int cs = chunkInfo_[i].size;
+    for (int64_t i = 0 ; i < chunks_ ; i++) {
+        off_t cs = chunkInfo_[i].size;
         if (chunkInfo_[i].status == CH_OK) {
-            int br = read(fd, buffer, cs);
+            int64_t br = read(fd, buffer, cs);
             md5Utils_.md5Buffer(buffer, br);
-            printf("%s\n", md5Utils_.getDigestStr());
+            DEBUG("%s\n", md5Utils_.getDigestStr());
             if (memcmp(md5Utils_.getDigest(),chunkInfo_[i].md5sum, 16) != 0) { // NOLINT
                 chunkInfo_[i].status = CH_ERROR;
                 printf("Corrupted chunks:\n");
@@ -426,7 +437,7 @@ void Metadata::checkDataChunks(const char* metaFile, const char *fileName) {
     }
 }
 
-void Metadata::writeMetadataHeader(int sd) {
+void Metadata::WriteMetadataHeader(int sd) {
     write(sd, digest_    , DIGEST_SIZE);
     write(sd, &fileSize_ , sizeof(fileSize_));
     write(sd, fileFull_  , FNAME_SIZE);
@@ -434,7 +445,7 @@ void Metadata::writeMetadataHeader(int sd) {
     write(sd, &chunks_   , sizeof(chunks_));
 }
 
-void Metadata::readMetadataHeader(int sd) {
+void Metadata::ReadMetadataHeader(int sd) {
     so_read(sd, digest_    , DIGEST_SIZE);
     so_read(sd, &fileSize_ , sizeof(fileSize_));
     so_read(sd, fileFull_  , FNAME_SIZE);

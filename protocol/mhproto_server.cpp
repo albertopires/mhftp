@@ -27,7 +27,7 @@ void MhProtoServer::SendChunkToClient(void) {
     int64_t nchunks;
     int64_t fileSize;
 
-    metadata_.readMetadataHeader(sd_);
+    metadata_.ReadMetadataHeader(sd_);
 
     chsize = metadata_.getChunkSize();
     nchunks = metadata_.getChunks();
@@ -108,7 +108,7 @@ void MhProtoServer::SendMetadataToClient(void) {
 
     Metadata metadata;
     metadata.create(file_path, NULL, CHUNK_SIZE, false);
-    metadata.writeMetadataHeader(sd_);
+    metadata.WriteMetadataHeader(sd_);
 }
 
 Chunk *MhProtoServer::LoadChunkFromFile(int fd, int64_t chunkSize) {

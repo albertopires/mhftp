@@ -29,8 +29,10 @@
 #include "../crypt/md5Utils.h"
 #include "./chunkInfo.h"
 
-#define HEADER_SIZE 2089
-#define CHUNK_SIZE  1048576  // 1MB
+#define HEADER_SIZE  2103
+#define HEADER_SIG   "MHFTP_METADATA"
+#define SIG_HDR_SIZE 14
+#define CHUNK_SIZE   1048576  // Default chunk size: 1MB
 
 /** File Metadata
  */
@@ -90,9 +92,9 @@ class Metadata {
     int64_t getChunkPayLoadSize(int64_t chunkNumber);
     void resetDownloadingChunks(const char* metaFile, int force);
     int resetAllChunks(const char* metaFile, int force);
-    void checkDataChunks(const char* metaFile, const char *fileName);
-    void writeMetadataHeader(int sd);
-    void readMetadataHeader(int sd);
+    void CheckDataChunks(const char* metaFile, const char *fileName);
+    void WriteMetadataHeader(int sd);
+    void ReadMetadataHeader(int sd);
 };
 
 #endif  // PROTOCOL_METADATA_H_
