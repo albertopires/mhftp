@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "./mhproto_client.h"
+#include "../protocol/mhproto_client.h"
 
 // Private Methods
 void MhProtoClient::DownloadFileFromServer(
