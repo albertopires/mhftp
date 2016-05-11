@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "./mhproto_server.h"
+#include "../protocol/mhproto_server.h"
 
 // Private Methods
 void MhProtoServer::SendChunkToClient(void) {
