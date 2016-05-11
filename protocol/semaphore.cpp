@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "./semaphore.h"
+#include "../protocol/semaphore.h"
 
 /** init: 1 create a new semaphore, 0 use an existing one.
   */

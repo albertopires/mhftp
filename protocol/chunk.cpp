@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "./chunk.h"
+#include "../protocol/chunk.h"
 
 /** Constructor.
   *

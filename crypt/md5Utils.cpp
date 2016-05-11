@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "md5Utils.h"
+#include "../crypt/md5Utils.h"
 
 /** Compute md5 of a buffer.
   * @param data unsigned chat pointer to data buffer.
