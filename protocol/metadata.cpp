@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "./metadata.h"
+#include "../protocol/metadata.h"
 
 /** Constructor.
   *
