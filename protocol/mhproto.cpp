@@ -14,20 +14,23 @@
  * limitations under the License.
  */
 
-#ifndef PROTOCOL_CHUNKINFO_H_
-#define PROTOCOL_CHUNKINFO_H_
+#include "../protocol/mhproto.h"
 
-#include <stdio.h>
-#include <stdlib.h>
+int64_t *MhProtoCommons::getPayLoadArray(
+        int64_t fileSize,
+        int64_t chunkSize,
+        int64_t nChunks) {
+    int64_t *payLoadArray;
+    payLoadArray = static_cast<int64_t*>(malloc(nChunks*sizeof(int64_t)));
 
-enum ChunkStatus { CH_OK, CH_PENDING, CH_ERROR , CH_DOWNLOAD , CH_UPLOAD };
+    for (int i = 0 ; i < nChunks ; i++) {
+        int64_t remain = fileSize - (chunkSize * i);
+        if (remain >= chunkSize) {
+            payLoadArray[i] = chunkSize;
+        } else {
+            payLoadArray[i] = remain;
+        }
+    }
 
-/** Basic unit of data to be transffered.
- */
-struct ChunkInfo {
-    unsigned char md5sum[16];
-    int64_t size;
-    ChunkStatus status;
-};
-
-#endif  // PROTOCOL_CHUNKINFO_H_
+    return payLoadArray;
+}

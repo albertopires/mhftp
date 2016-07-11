@@ -33,7 +33,7 @@ void MhProtoServer::SendChunkToClient(void) {
     nchunks = metadata_.getChunks();
     fileSize = metadata_.getFileSize();
 
-    setPayLoadArray(fileSize, chsize, nchunks);
+    payLoadArray_ = Metadata::getPayLoadArray(fileSize, chsize, nchunks);
 
     DEBUG("MhProtoServer::sendChunkToClient() - <%s>\n",
             metadata_.getFileFull());
@@ -64,10 +64,10 @@ void MhProtoServer::SendChunkToClient(void) {
 
         off_t filePos = (chunkNumber*metadata_.getChunkSize());
         lseek(fd, filePos , SEEK_SET);
-        chunk = LoadChunkFromFile(fd, payLoadArray[chunkNumber]);
+        chunk = LoadChunkFromFile(fd, payLoadArray_[chunkNumber]);
         DEBUG("MhProtoServer::sendChunkToClient : ");
         DEBUG("sending chunk number %ld - %ld bytes\n",
-                i64toLong(chunkNumber), i64toLong(payLoadArray[chunkNumber]));
+                i64toLong(chunkNumber), i64toLong(payLoadArray_[chunkNumber]));
         write(sd_, chunk->getMD5Sum(), DIGEST_SIZE);
         int64_t dataSize = chunk->getDataSize();
         write(sd_, &dataSize, sizeof(int64_t));
@@ -122,18 +122,60 @@ Chunk *MhProtoServer::LoadChunkFromFile(int fd, int64_t chunkSize) {
     return chunk;
 }
 
-void MhProtoServer::setPayLoadArray(int64_t fileSize,
-        int64_t chunkSize, int64_t nChunks) {
-    payLoadArray = static_cast<int64_t*>(malloc(nChunks*sizeof(int64_t)));
+void MhProtoServer::ReceiveChunkFromClient(void) {
+    DEBUG("MhProtoServer::ReceiveChunkFromClient()\n");
 
-    for (int i = 0 ; i < nChunks ; i++) {
-        int64_t remain = fileSize - (chunkSize * i);
-        if (remain >= chunkSize) {
-            payLoadArray[i] = chunkSize;
-        } else {
-            payLoadArray[i] = remain;
-        }
+    unsigned char *buffer = static_cast<unsigned char*>(malloc(MAX_CHUNK_SIZE));
+    int fd;
+    int64_t chunkSize;
+    int64_t chunkNumber = 0;
+
+    fd = open(local_file_, O_WRONLY);
+
+    while (chunkNumber != -1) {
+        int br = so_read(sd_, &chunkNumber ,  sizeof(int64_t));
+        if (br <= 0) chunkNumber = -1;
+        if (chunkNumber == -1) break;
+        so_read(sd_, &chunkSize, sizeof(int64_t));
+        so_read(sd_, buffer,     chunkSize);
+
+        off_t filePos = (chunkNumber*chunkSizeStd_);
+        // hex_dump(buffer, 200);
+        lseek(fd, filePos, SEEK_SET);
+        write(fd, buffer, chunkSize);
     }
+
+    close(fd);
+    free(buffer);
+}
+
+void MhProtoServer::InitUpload(void) {
+    char local_file[2048];
+
+    DEBUG("MhProtoServer::InitUpload()\n");
+
+    int16_t path_size;
+    int64_t file_size;
+    memset(local_file, 0, sizeof(local_file));
+
+    so_read(sd_, &path_size,     sizeof(int16_t));
+    so_read(sd_, local_file,     path_size);
+    so_read(sd_, &chunkSizeStd_, sizeof(int64_t));
+    so_read(sd_, &file_size,     sizeof(int64_t));
+
+    so_read(sd_, upload_digest_, DIGEST_SIZE);
+    CopyString(local_file_, AbsoluteFile(local_file));
+
+    DEBUG("upload.Path Size : %d\n"  , path_size);
+    DEBUG("upload.File Name : <%s>\n", local_file);
+    DEBUG("upload.File_Name : <%s>\n", local_file_);
+    DEBUG("upload.Chunk Size: %ld\n" , i64toLong(chunkSizeStd_));
+    DEBUG("upload.File Size : %ld\n" , i64toLong(file_size));
+    hex_dump(upload_digest_, DIGEST_SIZE);
+
+    // create file
+    int fd = open(local_file_, O_WRONLY | O_CREAT, 0000644);
+    close(fd);
 }
 
 // Public Methods
@@ -153,6 +195,10 @@ void MhProtoServer::RcvCmd(void) {
         case DOWNLOAD_CHUNK : SendChunkToClient();
             break;
         case DOWNLOAD_METADATA : SendMetadataToClient();
+            break;
+        case UPLOAD_CHUNK: ReceiveChunkFromClient();
+            break;
+        case UPLOAD_INIT: InitUpload();
             break;
         default:
             break;

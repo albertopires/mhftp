@@ -3,8 +3,8 @@ CC=g++
 CFLAGS=-Wall -Wextra -g -pedantic -std=c++11
 CRYPT_DIR=./crypt
 PROTO_DIR=./protocol
-VERS='"v1.0.2 - 10/May/2016"'
-LINK_OPTS=-lcrypto #-lefence
+VERS='"v1.1.0-rc1 - 11/Jul/2016"'
+LINK_OPTS=-lcrypto -lefence
 
 all: mhftp mhclient initFile mhstatus
 
@@ -30,8 +30,8 @@ mhclient: mhclient.o con_tcp.o tools.o $(PROTO_DIR)/mhproto_client.o \
     $(CRYPT_DIR)/md5Utils.o $(PROTO_DIR)/metadata.o $(PROTO_DIR)/chunk.o \
     $(PROTO_DIR)/semaphore.o global.h
 	$(CC) $(LIBS) $(CFLAGS) -o mhclient mhclient.o con_tcp.o tools.o \
-	$(PROTO_DIR)/mhproto_client.o $(CRYPT_DIR)/md5Utils.o \
-	$(PROTO_DIR)/metadata.o $(PROTO_DIR)/chunk.o \
+	$(PROTO_DIR)/mhproto_client.o \
+	$(PROTO_DIR)/metadata.o $(PROTO_DIR)/chunk.o $(CRYPT_DIR)/md5Utils.o \
 	$(PROTO_DIR)/semaphore.o $(LINK_OPTS)
 
 mhstatus: mhstatus.o con_tcp.o tools.o $(PROTO_DIR)/metadata.o $(CRYPT_DIR)/md5Utils.o\

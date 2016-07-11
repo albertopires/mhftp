@@ -68,6 +68,11 @@ void CopyString(char *dst_str, const char *src_str) {
         cout << "Error: str_str == NULL" << endl;
         return;
     }
+    if (dst_str == src_str) {
+        cout << "Src ptr is equal to Dst ptr. Huge mistake!!!  ";
+        cout << "FIX IT NOW DUMBASS!!!" << endl;
+        return;
+    }
     snprintf(dst_str, strlen(src_str)+1, "%s", src_str);
 }
 

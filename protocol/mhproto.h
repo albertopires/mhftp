@@ -36,6 +36,8 @@
 
 #define DOWNLOAD_CHUNK    1
 #define DOWNLOAD_METADATA 2
+#define UPLOAD_CHUNK      3
+#define UPLOAD_INIT       4
 
 #define MH_OK 0
 #define MH_FILE_NOT_FOUND 1
@@ -46,5 +48,13 @@
 
 using std::cout;
 using std::endl;
+
+class MhProtoCommons {
+ public:
+     static int64_t *getPayLoadArray(
+             int64_t fileSize,
+             int64_t chunkSize,
+             int64_t nChunks);
+};
 
 #endif  // PROTOCOL_MHPROTO_H_

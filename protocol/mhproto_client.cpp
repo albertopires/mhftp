@@ -54,7 +54,7 @@ void MhProtoClient::DownloadFileFromServer(
             break;
         }
         metadata_.setChunkStatus(chunkNumber, CH_DOWNLOAD, NULL);
-        metadata_.updateControlData(metaFile);
+        metadata_.UpdateControlData(metaFile);
         DEBUG("Next Pending Chunk : %ld\n", i64toLong(chunkNumber));
         sem_->semaphore_release_lock();
 
@@ -67,20 +67,20 @@ void MhProtoClient::DownloadFileFromServer(
         DEBUG("MD5       : <%s>\n", md5Utils.digestToStr(rcv_md5sum));
         if (br != DIGEST_SIZE) {
             sock_error = true;
-                goto update;
+            goto update;
         }
 
         br = so_read(cd_sd, (unsigned char*)&rcv_dataSize, sizeof(int64_t));
         DEBUG("Data Size : %ld\n", i64toLong(rcv_dataSize));
         if (br != sizeof(int64_t)) {
             sock_error = true;
-                goto update;
+            goto update;
         }
 
         br = so_read(cd_sd, rcv_buffer, rcv_dataSize);
         if (br != rcv_dataSize) {
             sock_error = true;
-                goto update;
+            goto update;
         }
 
         // hex_dump((char*)rcv_buffer,200);
@@ -96,7 +96,7 @@ update:
         } else {
             metadata_.setChunkStatus(chunkNumber, CH_OK, rcv_md5sum);
         }
-        metadata_.updateControlData(metaFile);
+        metadata_.UpdateControlData(metaFile);
         sem_->semaphore_release_lock();
     } while (chunkNumber != -1 && *kill_proc_ == 0);
     close(fd_download);
@@ -112,6 +112,75 @@ void MhProtoClient::RequestChunk(int cd_sd , int64_t chunkNumber) {
     snprintf(chunkNumberStr, sizeof(chunkNumberStr), "%ld",
         i64toLong(chunkNumber));
     write(cd_sd, chunkNumberStr, sizeof(chunkNumberStr));
+}
+
+// Upload Code
+void MhProtoClient::UploadFileToServer(int cd_sd, const char *localFile) {
+    unsigned char *snd_buffer = NULL;
+    unsigned char snd_md5sum[16];
+    snd_buffer = static_cast<unsigned char*>(malloc(MAX_CHUNK_SIZE));
+    int64_t fileSize;
+    int64_t chunkSize;
+    int64_t nChunks;
+
+    SndCmd(cd_sd, UPLOAD_CHUNK);
+    metadata_.LoadMetadata();
+
+    int fd_upload = open(localFile , O_RDONLY);
+    if (fd_upload == -1) {
+        perror("open download file ");
+        exit(1);
+    }
+
+    int64_t chunkNumber = -1;
+    bool sock_error = false;
+    off_t filePos;
+    fileSize  = metadata_.getFileSize();
+    chunkSize = metadata_.getChunkSize();
+    nChunks   = metadata_.getChunks();
+    payLoadArray_ = Metadata::getPayLoadArray(fileSize, chunkSize, nChunks);
+    do {
+        DEBUG("Before lock : %ld - \033[1m\033[32m%d\033[0m\n",
+                i64toLong(chunkNumber),
+                getpid());
+        sem_->semaphore_get_lock();
+        metadata_.LoadMetadata();
+        chunkNumber = metadata_.getNextPendingChunk();
+        if (chunkNumber == -1) {
+            chunkNumber = -1;
+            sem_->semaphore_release_lock();
+            write(cd_sd, &chunkNumber, sizeof(int64_t));
+            break;
+        }
+        metadata_.setChunkStatus(chunkNumber, CH_UPLOAD, NULL);
+        metadata_.UpdateControlData();
+        DEBUG("Next Pending Chunk : %ld\n", i64toLong(chunkNumber));
+        sem_->semaphore_release_lock();
+
+        // Read Chunk from local file
+        int64_t chunkSize = metadata_.getChunkSize();
+        filePos = (chunkNumber*chunkSize);
+        lseek(fd_upload, filePos, SEEK_SET);
+        int64_t br = read(fd_upload, snd_buffer, payLoadArray_[chunkNumber]);
+        // Send data to server
+        write(cd_sd, &chunkNumber, sizeof(int64_t));
+        write(cd_sd, &br,          sizeof(int64_t));
+        write(cd_sd, snd_buffer,   br);
+        DEBUG("Next Pending Chunk-v : %ld\n", i64toLong(chunkNumber));
+        sem_->semaphore_get_lock();
+        metadata_.LoadMetadata();
+        if (sock_error) {
+            metadata_.setChunkStatus(chunkNumber, CH_ERROR, snd_md5sum);
+            chunkNumber = -1;
+        } else {
+            metadata_.setChunkStatus(chunkNumber, CH_OK, snd_md5sum);
+        }
+        metadata_.UpdateControlData();
+        sem_->semaphore_release_lock();
+    } while (chunkNumber != -1 && *kill_proc_ == 0);
+    close(fd_upload);
+    if (snd_buffer != NULL) free(snd_buffer);
+    DEBUG("Process: no more chunks to upload.\n");
 }
 
 /** Corrupt file for test purposes.
@@ -131,7 +200,7 @@ void MhProtoClient::createError(const char *file) {
 
 void MhProtoClient::CreateSharedMemory(void) {
     unsigned int seed = getpid();
-    shm_key_ = 1234;
+    shm_key_ = 2234;
     int shm_size = sizeof(int);
     do {
         shmid_ = shmget(shm_key_, shm_size, 0611 | IPC_CREAT | IPC_EXCL);
@@ -182,7 +251,7 @@ void MhProtoClient::DownloadFileFromServer(
 
     metadata_.LoadMetadata(metaFile);
     metadata_.setInUse(1);
-    metadata_.saveMetadata(metaFile);
+    metadata_.SaveMetadata(metaFile);
 
     printf("Number of clients : %d\n" , numClient_);
     if (numClient_ < 0 || numClient_ > NPROC) exit(1);
@@ -230,7 +299,7 @@ void MhProtoClient::DownloadFileFromServer(
 
     metadata_.LoadMetadata(metaFile);
     metadata_.setInUse(0);
-    metadata_.saveMetadata(metaFile);
+    metadata_.SaveMetadata(metaFile);
 
     if (verbose_) waitpid(monitor_pid_, NULL, 0);
 
@@ -272,7 +341,7 @@ void MhProtoClient::DownloadMetadataFromServer(int smd,
     CopyString(abs_file, AbsoluteFile(remote_file));
     StrCat(abs_file, ".mdata");
 
-    // Metadata::saveMetadata only updates, so create "touch" metadata
+    // Metadata::SaveMetadata only updates, so create "touch" metadata
     // file first.
     int fd = open(abs_file , O_WRONLY | O_CREAT, 0000644);
     close(fd);
@@ -280,8 +349,92 @@ void MhProtoClient::DownloadMetadataFromServer(int smd,
     Metadata metadata;
     metadata.ReadMetadataHeader(smd);
     metadata.initControlData();
-    metadata.saveMetadata(abs_file);
+    metadata.SaveMetadata(abs_file);
 }
+
+
+///// UPLOAD CODE
+void MhProtoClient::UploadFileToServer(const char *localFile) {
+    DEBUG("Local File : <%s>\n", localFile);
+    printf("Number of clients : %d\n" , numClient_);
+    if (numClient_ < 0 || numClient_ > NPROC) exit(1);
+
+    for (int i = 0 ; i < numClient_ ; i++) {
+        // Init each server connection before sending chunks
+        InitUploadOnServer(client_sd_[i], localFile, i == 0);
+        metadata_.setInUse(2);
+        metadata_.SaveMetadata();
+        pid_[i] = fork();
+        if (pid_[i] == -1) {
+            cout << "Could not create process." << endl;
+            exit(1);
+        }
+        if (pid_[i] == 0) {
+            signal(SIGINT, SIG_IGN);
+            DEBUG("Create upload fork()\n");
+            main_proc_ = false;
+            UploadFileToServer(client_sd_[i], localFile);
+            close(client_sd_[i]);
+            exit(0);
+        }
+    }
+
+    if (verbose_) {
+        DEBUG("Verbose\n");
+        monitor_pid_ = fork();
+        if (monitor_pid_== 0) {
+            const char *meta_file = metadata_.getFileMetadata();
+            signal(SIGINT, SIG_IGN);
+            char in_use = 2;
+            while (in_use == 2 && *kill_proc_ == 0) {
+                in_use = metadata_.getInUse();
+                printf("%s", ANSI_SC);
+                metadata_.DisplayControlData();
+                metadata_.LoadMetadata(meta_file);
+                printf("\n");
+                if (in_use == 2 && *kill_proc_ == 0) printf("%s", ANSI_RC);
+                sleep(1);
+            }
+            printf("\n");
+            exit(0);
+        }
+    }
+
+    for (int i = 0 ; i < numClient_ ; i++) {
+        DEBUG("Upload: Wait for pid : %d\n", pid_[i]);
+        waitpid(pid_[i], NULL, 0);
+    }
+    DEBUG("Upload: After Wait for pid......\n");
+
+    const char *meta_file = metadata_.getFileMetadata();
+    metadata_.LoadMetadata(meta_file);
+    metadata_.setInUse(0);
+    metadata_.SaveMetadata(meta_file);
+
+    if (verbose_) waitpid(monitor_pid_, NULL, 0);
+
+    cout << "End of Upload:" << endl;
+}
+
+void MhProtoClient::InitUploadOnServer(int smd, const char *local_file,
+        bool create) {
+    SndCmd(smd, UPLOAD_INIT);
+    int16_t path_size = strlen(local_file);
+    int64_t chunk_size = CHUNK_SIZE;
+    int64_t file_size;
+
+    write(smd, &path_size,  sizeof(int16_t));
+    write(smd, local_file,  path_size);
+    write(smd, &chunk_size, sizeof(int64_t));
+
+    if (create && !metadata_.HasMetadataFile(local_file, true))
+        metadata_.create(local_file, chunk_size, true);
+    file_size = metadata_.getFileSize();
+    write(smd, &file_size, sizeof(int64_t));
+    write(smd, metadata_.getDigest(), DIGEST_SIZE);
+}
+
+///// UPLOAD CODE
 
 void MhProtoClient::KillClient(void) {
     if (main_proc_) {

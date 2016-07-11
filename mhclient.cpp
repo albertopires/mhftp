@@ -35,6 +35,8 @@ using std::endl;
 
 void HostPort(const char *hostPortStr, char *host, int *port);
 void sig_handler(int signo);
+void downloadFile(int *sds, int n_hosts, const char *file, bool verbose);
+void uploadFile(int *sds, int n_hosts, const char *file, bool verbose);
 
 MhProtoClient *mhProto;
 
@@ -44,16 +46,14 @@ int main(int argc, char *argv[]) {
     int  n_hosts;
     char host[256];
     int  port;
-    char file_name[2048];
-    char meta_name[2048];
     bool verbose = false;
 
     printf("MhClient %s\n\n", VER);
 
     DEBUG("Debug Enabled.\n");
 
-    if (argc < 3) {
-        printf("Error: mhclient <remote_file> ");
+    if (argc < 4) {
+        printf("Error: mhclient <cmd> [-v] <remote_file> ");
         printf("<host1:port> <host2:port> .. <hostn:port>\n\n");
         exit(0);
     }
@@ -68,9 +68,9 @@ int main(int argc, char *argv[]) {
     }
     signal(SIGCHLD, SIG_IGN);
 
-    int hosts_index = 2;
+    int hosts_index = 3;
 
-    if (strcmp(argv[1], "-v") == 0) {
+    if (strcmp(argv[2], "-v") == 0) {
         hosts_index++;
         verbose = true;
     }
@@ -92,10 +92,30 @@ int main(int argc, char *argv[]) {
         sds[i-hosts_index] = sd;
     }
 
+    if (strcmp(argv[1], "download") == 0)
+        downloadFile(sds, n_hosts, argv[hosts_index-1], verbose);
+    if (strcmp(argv[1], "upload") == 0)
+        uploadFile(sds, n_hosts, argv[hosts_index-1], verbose);
+
+    exit(0);
+}
+
+void uploadFile(int *sds, int n_hosts, const char *file, bool verbose) {
+    mhProto = new MhProtoClient(sds, n_hosts, verbose);
+
+    mhProto->UploadFileToServer(file);
+
+    delete mhProto;
+}
+
+void downloadFile(int *sds, int n_hosts, const char *file, bool verbose) {
+    char file_name[2048];
+    char meta_name[2048];
+
     mhProto = new MhProtoClient(sds, n_hosts, verbose);
 
     // Generate Metadata and Local file name.
-    CopyString(file_name, AbsoluteFile(argv[hosts_index-1]));
+    CopyString(file_name, AbsoluteFile(file));
     CopyString(meta_name, file_name);
     StrCat(meta_name, METADATA_EXT);
     DEBUG("Local File : <%s>\n", file_name);
@@ -103,14 +123,12 @@ int main(int argc, char *argv[]) {
 
     // If needed, download Metadata file from server.
     if (!file_exists(meta_name))
-        mhProto->DownloadMetadataFromServer(sds[0], argv[hosts_index-1]);
+        mhProto->DownloadMetadataFromServer(sds[0], file);
 
     mhProto->DownloadFileFromServer(meta_name, file_name);
 
     printf("Client - End of transfer.\n");
     delete mhProto;
-
-    exit(0);
 }
 
 void HostPort(const char *hostPortStr, char *host, int *port) {

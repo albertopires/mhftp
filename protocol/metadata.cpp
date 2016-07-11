@@ -71,6 +71,13 @@ const unsigned char* Metadata::getDigest(void) {
     return digest_;
 }
 
+const char* Metadata::getFileMetadata(void) {
+    return fileMetadata_;
+}
+
+/** If save == true, save metadata to file.
+ *
+ */
 void Metadata::create(const char *fileName, int64_t chunkSize, bool save) {
     create(fileName, NULL, chunkSize, save);
 }
@@ -128,6 +135,50 @@ void Metadata::StoreMetadata(const char *fileName, int chunkSize, int chunks) {
     StoreMetadata(fileName, NULL, chunkSize, chunks);
 }
 
+bool Metadata::HasMetadataFile(const char *fileName) {
+    return HasMetadataFile(fileName, false);
+}
+
+/**
+ * if loadMetadata is true and a metadata file is found, it is loaded.
+ */
+bool Metadata::HasMetadataFile(const char *fileName, bool loadMetadata) {
+    char *fileAbsolute;
+    char fileMetadata[1024];
+    char fileFull[2048];
+
+    memset(fileMetadata , 0 , sizeof(fileMetadata));
+    memset(fileFull     , 0 , sizeof(fileFull));
+
+    for (int i = strlen(fileName) ; i > 0 ; i--) {
+        if (fileName[i] == '/') {
+            fileAbsolute = strdup(&fileName[i+1]);
+            break;
+        }
+    }
+
+    StrCat(fileFull , fileName);
+
+    StrCat(fileMetadata , fileAbsolute);
+    StrCat(fileMetadata , ".mdata");
+
+    DEBUG("HasMetadataFile : check for <%s>\n", fileMetadata);
+
+    if (access(fileMetadata, F_OK) != -1) {
+        // File exists
+        DEBUG("HasMetadataFile file <%s> exists\n", fileMetadata);
+        if (loadMetadata) {
+            CopyString(fileMetadata_, fileMetadata);
+            LoadMetadata();
+        }
+        return true;
+    } else {
+        // File does not exist
+        DEBUG("HasMetadataFile file <%s> does not exist\n", fileMetadata);
+        return false;
+    }
+}
+
 void Metadata::StoreMetadata(
         const char *fileName,
         const char *metadataName,
@@ -157,6 +208,7 @@ void Metadata::StoreMetadata(
     } else {
         CopyString(fileMetadata, metadataName);
     }
+    CopyString(fileMetadata_, fileMetadata);
 
     printf("Storing metadata file...\n");
     printf("File Metadata: <%s>\n" , fileMetadata);
@@ -191,6 +243,10 @@ void Metadata::showChunkError(int64_t i) {
 
 //  Public Methods
 //
+void Metadata::LoadMetadata(void) {
+    LoadMetadata(fileMetadata_);
+}
+
 void Metadata::LoadMetadata(const char* fileMetadata) {
     char header_sig[15];
     chunkSize_ = -1;
@@ -199,6 +255,7 @@ void Metadata::LoadMetadata(const char* fileMetadata) {
 
     int fd = open(fileMetadata , O_RDONLY);
     if (fd == -1) {
+        printf("LoadMetadata::Failed to open metadata <%s>\n", fileMetadata);
         perror("Meta Data File ");
         exit(1);
     }
@@ -225,10 +282,15 @@ void Metadata::LoadMetadata(const char* fileMetadata) {
     close(fd);
 }
 
-void Metadata::saveMetadata(const char* fileMetadata) {
+void Metadata::SaveMetadata(void) {
+    SaveMetadata(fileMetadata_);
+}
+
+void Metadata::SaveMetadata(const char* fileMetadata) {
     int fd = open(fileMetadata , O_WRONLY);
     if (fd == -1) {
-        perror("Meta Data File ");
+        printf("Failed to open metadata file <%s>\n", fileMetadata);
+        perror("SaveMetadata::Meta Data File ");
         exit(1);
     }
 
@@ -270,7 +332,11 @@ void Metadata::initControlData(void) {
     }
 }
 
-void Metadata::updateControlData(const char *metaFile) {
+void Metadata::UpdateControlData(void) {
+    UpdateControlData(fileMetadata_);
+}
+
+void Metadata::UpdateControlData(const char *metaFile) {
     int64_t nChunks = getChunks();
 
     int64_t chunkArraySize = sizeof(struct ChunkInfo)*nChunks;
@@ -291,7 +357,18 @@ void Metadata::DisplayControlData(const char* metaFile) {
 
     int64_t nChunks = getChunks();
     printf("Number of chunks : %ld - ", i64toLong(nChunks));
-    printf("Status : %s\n" , getInUse() == 0 ? "IDLE" : "DOWNLOADING");
+
+    printf("Status : ");
+    switch (getInUse()) {
+        case 0 : printf("IDLE\n");
+                 break;
+        case 1 : printf("DOWNLOADING\n");
+                 break;
+        case 2 : printf("UPLOADING\n");
+                 break;
+        default: printf("UNKNOWN\n");
+    }
+
     for (int i = 0 ; i < nChunks ; i++) {
         if (chunkInfo_[i].status == CH_OK)
             PrintColor("O", DC_GREEN);
@@ -301,6 +378,8 @@ void Metadata::DisplayControlData(const char* metaFile) {
             PrintColor("E", LC_RED);
         if (chunkInfo_[i].status == CH_DOWNLOAD)
             PrintColor("D", LC_CYAN);
+        if (chunkInfo_[i].status == CH_UPLOAD)
+            PrintColor("U", LC_CYAN);
     }
 }
 
@@ -309,7 +388,17 @@ void Metadata::DisplayControlDataMD5(const char* metaFile) {
 
     int64_t nChunks = getChunks();
     printf("Number of chunks : %ld - ", i64toLong(nChunks));
-    printf("Status : %s\n" , getInUse() == 0 ? "IDLE" : "DOWNLOADING");
+    printf("Status : ");
+    switch (getInUse()) {
+        case 0 : printf("IDLE\n");
+                 break;
+        case 1 : printf("DOWNLOADING\n");
+                 break;
+        case 2 : printf("UPLOADING\n");
+                 break;
+        default: printf("UNKNOWN\n");
+    }
+
     for (int i = 0 ; i < nChunks ; i++) {
         if (chunkInfo_[i].status == CH_OK)
             PrintColor("O - ", DC_GREEN, 0);
@@ -319,6 +408,8 @@ void Metadata::DisplayControlDataMD5(const char* metaFile) {
             PrintColor("E - ", LC_RED, 0);
         if (chunkInfo_[i].status == CH_DOWNLOAD)
             PrintColor("D - ", LC_CYAN, 0);
+        if (chunkInfo_[i].status == CH_UPLOAD)
+            PrintColor("U - ", LC_CYAN, 0);
         printf("%s", md5Utils_.digestToStr(chunkInfo_[i].md5sum));
         printf(" %ld", (long)chunkInfo_[i].size); // NOLINT
         cout << C_RESET << endl;
@@ -337,13 +428,17 @@ void Metadata::DisplayControlData(void) {
             PrintColor("E", LC_RED);
         if (chunkInfo_[i].status == CH_DOWNLOAD)
             PrintColor("D", LC_CYAN);
+        if (chunkInfo_[i].status == CH_UPLOAD)
+            PrintColor("U", LC_CYAN);
     }
 }
 
 int64_t Metadata::getNextPendingChunk(void) {
     for (int i = 0 ; i < chunks_ ; i++) {
-        if ((chunkInfo_[i].status != CH_OK)
-                && (chunkInfo_[i].status != CH_DOWNLOAD)) {
+        if (
+                (chunkInfo_[i].status != CH_OK)
+                && (chunkInfo_[i].status != CH_DOWNLOAD)
+                && (chunkInfo_[i].status != CH_UPLOAD)) {
             return i;
         }
     }
@@ -381,7 +476,7 @@ void Metadata::resetDownloadingChunks(const char* metaFile, int force) {
             chunkInfo_[i].status = CH_PENDING;
         }
     }
-    saveMetadata(metaFile);
+    SaveMetadata(metaFile);
 }
 
 /** Reset all chunk status to CH_PENDING. 
@@ -393,7 +488,7 @@ int Metadata::resetAllChunks(const char* metaFile, int force) {
     for (int i = 0 ; i < chunks_ ; i++) {
         chunkInfo_[i].status = CH_PENDING;
     }
-    saveMetadata(metaFile);
+    SaveMetadata(metaFile);
 
     return 0;
 }
@@ -433,7 +528,7 @@ void Metadata::CheckDataChunks(const char* metaFile, const char *fileName) {
     close(fd);
     if (in_use_ == 0) {
         cout << "updating metadata" << endl;
-        saveMetadata(metaFile);
+        SaveMetadata(metaFile);
     }
 }
 
@@ -451,4 +546,24 @@ void Metadata::ReadMetadataHeader(int sd) {
     so_read(sd, fileFull_  , FNAME_SIZE);
     so_read(sd, &chunkSize_, sizeof(chunkSize_));
     so_read(sd, &chunks_   , sizeof(chunks_));
+}
+
+
+int64_t *Metadata::getPayLoadArray(
+        int64_t fileSize,
+        int64_t chunkSize,
+        int64_t nChunks) {
+    int64_t *payLoadArray;
+    payLoadArray = static_cast<int64_t*>(malloc(nChunks*sizeof(int64_t)));
+
+    for (int i = 0 ; i < nChunks ; i++) {
+        int64_t remain = fileSize - (chunkSize * i);
+        if (remain >= chunkSize) {
+            payLoadArray[i] = chunkSize;
+        } else {
+            payLoadArray[i] = remain;
+        }
+    }
+
+    return payLoadArray;
 }
