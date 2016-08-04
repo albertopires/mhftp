@@ -143,19 +143,14 @@ bool Metadata::HasMetadataFile(const char *fileName) {
  * if loadMetadata is true and a metadata file is found, it is loaded.
  */
 bool Metadata::HasMetadataFile(const char *fileName, bool loadMetadata) {
-    char *fileAbsolute;
+    const char *fileAbsolute;
     char fileMetadata[1024];
     char fileFull[2048];
 
     memset(fileMetadata , 0 , sizeof(fileMetadata));
     memset(fileFull     , 0 , sizeof(fileFull));
 
-    for (int i = strlen(fileName) ; i > 0 ; i--) {
-        if (fileName[i] == '/') {
-            fileAbsolute = strdup(&fileName[i+1]);
-            break;
-        }
-    }
+    fileAbsolute = AbsoluteFile(fileName);
 
     StrCat(fileFull , fileName);
 
@@ -184,7 +179,7 @@ void Metadata::StoreMetadata(
         const char *metadataName,
         int64_t chunkSize,
         int64_t chunks) {
-    char *fileAbsolute;
+    const char *fileAbsolute;
     char fileMetadata[1024];
     char fileFull[2048];
     struct stat fileStat;
@@ -193,12 +188,7 @@ void Metadata::StoreMetadata(
     memset(fileFull     , 0 , sizeof(fileFull));
     memset(&fileStat    , 0 , sizeof(fileStat));
 
-    for (int i = strlen(fileName) ; i > 0 ; i--) {
-        if (fileName[i] == '/') {
-            fileAbsolute = strdup(&fileName[i+1]);
-            break;
-        }
-    }
+    fileAbsolute = AbsoluteFile(fileName);
 
     StrCat(fileFull , fileName);
 

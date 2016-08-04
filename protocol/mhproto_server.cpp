@@ -83,8 +83,16 @@ void MhProtoServer::SendMetadataToClient(void) {
     int16_t path_size;
     int16_t response;
     char file_path[2048];
+    int64_t chunk_size;
 
     DEBUG("MhProtoServer::SendMetadataToClient()\n");
+
+    so_read(sd_, &chunk_size, sizeof(int64_t));
+    if (chunk_size == 0)
+        chunk_size_ = CHUNK_SIZE;
+    else
+        chunk_size_ = chunk_size;
+    DEBUG("Chunk Size : %ld\n", chunk_size_);
 
     so_read(sd_, reinterpret_cast<unsigned char*>(&path_size), sizeof(int16_t)); // NOLINT
     DEBUG("Path Size : %d\n", path_size);
@@ -107,7 +115,7 @@ void MhProtoServer::SendMetadataToClient(void) {
     DEBUG("SendMetadataToClient->response : %d\n", response);
 
     Metadata metadata;
-    metadata.create(file_path, NULL, CHUNK_SIZE, false);
+    metadata.create(file_path, NULL, chunk_size_, false);
     metadata.WriteMetadataHeader(sd_);
 }
 
@@ -139,7 +147,7 @@ void MhProtoServer::ReceiveChunkFromClient(void) {
         so_read(sd_, &chunkSize, sizeof(int64_t));
         so_read(sd_, buffer,     chunkSize);
 
-        off_t filePos = (chunkNumber*chunkSizeStd_);
+        off_t filePos = (chunkNumber*chunk_size_);
         // hex_dump(buffer, 200);
         lseek(fd, filePos, SEEK_SET);
         write(fd, buffer, chunkSize);
@@ -158,10 +166,10 @@ void MhProtoServer::InitUpload(void) {
     int64_t file_size;
     memset(local_file, 0, sizeof(local_file));
 
-    so_read(sd_, &path_size,     sizeof(int16_t));
-    so_read(sd_, local_file,     path_size);
-    so_read(sd_, &chunkSizeStd_, sizeof(int64_t));
-    so_read(sd_, &file_size,     sizeof(int64_t));
+    so_read(sd_, &path_size,   sizeof(int16_t));
+    so_read(sd_, local_file,   path_size);
+    so_read(sd_, &chunk_size_, sizeof(int64_t));
+    so_read(sd_, &file_size,   sizeof(int64_t));
 
     so_read(sd_, upload_digest_, DIGEST_SIZE);
     CopyString(local_file_, AbsoluteFile(local_file));
@@ -169,7 +177,7 @@ void MhProtoServer::InitUpload(void) {
     DEBUG("upload.Path Size : %d\n"  , path_size);
     DEBUG("upload.File Name : <%s>\n", local_file);
     DEBUG("upload.File_Name : <%s>\n", local_file_);
-    DEBUG("upload.Chunk Size: %ld\n" , i64toLong(chunkSizeStd_));
+    DEBUG("upload.Chunk Size: %ld\n" , i64toLong(chunk_size_));
     DEBUG("upload.File Size : %ld\n" , i64toLong(file_size));
     hex_dump(upload_digest_, DIGEST_SIZE);
 
@@ -179,8 +187,12 @@ void MhProtoServer::InitUpload(void) {
 }
 
 // Public Methods
-MhProtoServer::MhProtoServer(int sd) {
+MhProtoServer::MhProtoServer(int sd, int64_t chunk_size) {
     sd_ = sd;
+    if (chunk_size == 0)
+        chunk_size_ = CHUNK_SIZE;
+    else
+        chunk_size_ = chunk_size;
 }
 
 void MhProtoServer::RcvCmd(void) {

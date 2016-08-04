@@ -35,8 +35,10 @@ using std::endl;
 
 void HostPort(const char *hostPortStr, char *host, int *port);
 void sig_handler(int signo);
-void downloadFile(int *sds, int n_hosts, const char *file, bool verbose);
-void uploadFile(int *sds, int n_hosts, const char *file, bool verbose);
+void DownloadFile(int *sds, int n_hosts,
+        const char *file, int64_t chunk_size, bool verbose);
+void UploadFile(int *sds, int n_hosts,
+        const char *file, int64_t chunk_size, bool verbose);
 
 MhProtoClient *mhProto;
 
@@ -53,7 +55,7 @@ int main(int argc, char *argv[]) {
     DEBUG("Debug Enabled.\n");
 
     if (argc < 4) {
-        printf("Error: mhclient <cmd> [-v] <remote_file> ");
+        printf("Error: mhclient <cmd> [-v] [-c chunk_size] <file> ");
         printf("<host1:port> <host2:port> .. <hostn:port>\n\n");
         exit(0);
     }
@@ -69,11 +71,24 @@ int main(int argc, char *argv[]) {
     signal(SIGCHLD, SIG_IGN);
 
     int hosts_index = 3;
+    int chunk_size  = 0;
 
-    if (strcmp(argv[2], "-v") == 0) {
-        hosts_index++;
-        verbose = true;
+    // Cmd parameters
+    int index_param = 2;
+    while (argv[index_param][0] == '-') {
+        if (strcmp(argv[index_param], "-v") == 0) {
+            hosts_index++;
+            index_param++;
+            verbose = true;
+        }
+        if (strcmp(argv[index_param], "-c") == 0) {
+            index_param++;
+            chunk_size = SuffixToInt(argv[index_param]);
+            index_param++;
+            hosts_index += 2;
+        }
     }
+    DEBUG("Chunk size selected: %d\n", chunk_size);
 
     n_hosts = argc - hosts_index;
     sds = static_cast<int*>(malloc(n_hosts*sizeof(int)));
@@ -93,28 +108,30 @@ int main(int argc, char *argv[]) {
     }
 
     if (strcmp(argv[1], "download") == 0)
-        downloadFile(sds, n_hosts, argv[hosts_index-1], verbose);
+        DownloadFile(sds, n_hosts, argv[hosts_index-1], chunk_size, verbose);
     if (strcmp(argv[1], "upload") == 0)
-        uploadFile(sds, n_hosts, argv[hosts_index-1], verbose);
+        UploadFile(sds, n_hosts, argv[hosts_index-1], chunk_size, verbose);
 
     exit(0);
 }
 
-void uploadFile(int *sds, int n_hosts, const char *file, bool verbose) {
-    mhProto = new MhProtoClient(sds, n_hosts, verbose);
+void UploadFile(int *sds, int n_hosts,
+        const char *file, int64_t chunk_size, bool verbose) {
+    mhProto = new MhProtoClient(sds, n_hosts, chunk_size, verbose);
 
     mhProto->UploadFileToServer(file);
 
     delete mhProto;
 }
 
-void downloadFile(int *sds, int n_hosts, const char *file, bool verbose) {
+void DownloadFile(int *sds, int n_hosts,
+        const char *file, int64_t chunk_size, bool verbose) {
     char file_name[2048];
     char meta_name[2048];
 
-    mhProto = new MhProtoClient(sds, n_hosts, verbose);
+    mhProto = new MhProtoClient(sds, n_hosts, chunk_size, verbose);
 
-    // Generate Metadata and Local file name.
+    // Generate Metadata file name and Local file name.
     CopyString(file_name, AbsoluteFile(file));
     CopyString(meta_name, file_name);
     StrCat(meta_name, METADATA_EXT);
@@ -123,7 +140,7 @@ void downloadFile(int *sds, int n_hosts, const char *file, bool verbose) {
 
     // If needed, download Metadata file from server.
     if (!file_exists(meta_name))
-        mhProto->DownloadMetadataFromServer(sds[0], file);
+        mhProto->DownloadMetadataFromServer(sds[0], file, chunk_size);
 
     mhProto->DownloadFileFromServer(meta_name, file_name);
 

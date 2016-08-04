@@ -47,15 +47,24 @@ After a successful build, there will be the following binaries:
 
 ***mhclient*** is the client program. Example:
 
+* **-v** verbose (show transfer progress)
+* **-c size** chunk size (default 1M). Size can be specified in bytes or use
+suffixes like **K,k** or **M,m**.
+
 `
 user@server:~/git/mhftp (master)$ ./mhclient download archive.tar 192.168.120.10:5000 172.16.30.2:5000
 `
 
-or
-
 `
 user@server:~/git/mhftp (master)$ ./mhclient upload archive.tar 192.168.120.10:5000 172.16.30.2:5000
 `
+
+Download file, show progress and set chunk size to 5 Mega bytes:
+
+`
+user@server:~/git/mhftp (master)$ ./mhclient download -v -c 5M archive.tar 192.168.120.10:5000 172.16.30.2:5000
+`
+
 
 
 ***mhstatus*** inspects and modifies the metadata file.<br>

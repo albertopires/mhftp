@@ -29,7 +29,7 @@ class MhProtoServer {
     MD5Utils md5utils_;
     int sd_;  // Socket Descriptor
     int64_t  *payLoadArray_;
-    int64_t  chunkSizeStd_;
+    int64_t  chunk_size_;
     Metadata metadata_;
 
     void SendChunkToClient(void);
@@ -39,7 +39,7 @@ class MhProtoServer {
     Chunk *LoadChunkFromFile(int fd , int64_t chunkSize);
 
  public:
-    explicit MhProtoServer(int sd);
+    explicit MhProtoServer(int sd, int64_t chunk_size);
     void RcvCmd(void);
     const char *getFileName(void);
     const char *getFileDesc(void);

@@ -223,7 +223,10 @@ void MhProtoClient::DestroySharedMemory(void) {
 }
 
 // Public Methods
-MhProtoClient::MhProtoClient(int *sd , int numClient, bool verbose) {
+MhProtoClient::MhProtoClient(int *sd ,
+        int numClient,
+        int64_t chunk_size,
+        bool verbose) {
     // Constructor
     sem_ = new Semaphore(1);
     CreateSharedMemory();
@@ -233,6 +236,10 @@ MhProtoClient::MhProtoClient(int *sd , int numClient, bool verbose) {
     main_proc_ = true;
     verbose_   = verbose;
     if (is_debug_enabled()) verbose_ = false;
+    if (chunk_size == 0)
+        chunk_size_ = CHUNK_SIZE;
+    else
+        chunk_size_ = chunk_size;
 }
 
 void MhProtoClient::SndCmd(int cd_sd, unsigned char cmd) {
@@ -319,12 +326,14 @@ void MhProtoClient::DownloadFileFromServer(
 
 //  public
 void MhProtoClient::DownloadMetadataFromServer(int smd,
-        const char *remote_file) {
+        const char *remote_file,
+        int64_t chunk_size) {
     int16_t response;
     char abs_file[2048];
 
     DEBUG("MhProtoClient::DownloadMetadataFromServer()\n");
     SndCmd(smd, DOWNLOAD_METADATA);
+    write(smd, &chunk_size, sizeof(int64_t));
 
     int16_t path_size = strlen(remote_file);
     write(smd, &path_size, sizeof(int16_t));
@@ -334,7 +343,7 @@ void MhProtoClient::DownloadMetadataFromServer(int smd,
     DEBUG("DownloadMetadataFromServer->response : %d\n", response);
     if (response == MH_FILE_NOT_FOUND) {
         printf("Remote file not found.\n");
-        if (sem_ != NULL) delete sem_;
+        ClearResources();
         exit(1);
     }
 
@@ -419,16 +428,16 @@ void MhProtoClient::UploadFileToServer(const char *localFile) {
 void MhProtoClient::InitUploadOnServer(int smd, const char *local_file,
         bool create) {
     SndCmd(smd, UPLOAD_INIT);
+
     int16_t path_size = strlen(local_file);
-    int64_t chunk_size = CHUNK_SIZE;
     int64_t file_size;
 
-    write(smd, &path_size,  sizeof(int16_t));
-    write(smd, local_file,  path_size);
-    write(smd, &chunk_size, sizeof(int64_t));
+    write(smd, &path_size,   sizeof(int16_t));
+    write(smd, local_file,   path_size);
+    write(smd, &chunk_size_, sizeof(int64_t));
 
     if (create && !metadata_.HasMetadataFile(local_file, true))
-        metadata_.create(local_file, chunk_size, true);
+        metadata_.create(local_file, chunk_size_, true);
     file_size = metadata_.getFileSize();
     write(smd, &file_size, sizeof(int64_t));
     write(smd, metadata_.getDigest(), DIGEST_SIZE);
@@ -475,6 +484,11 @@ int MhProtoClient::getKillProc(void) {
 
 MhProtoClient::~MhProtoClient(void) {
     DEBUG("MhProtoClient::Destructor\n");
-    delete sem_;
+    if (sem_ != NULL) delete sem_;
+    DestroySharedMemory();
+}
+
+void MhProtoClient::ClearResources(void) {
+    if (sem_ != NULL) delete sem_;
     DestroySharedMemory();
 }

@@ -90,7 +90,7 @@ int main(int argc , char *argv[]) {
 // Handle Protocol
 void core(int sd) {
     printf("Core()\n");
-    MhProtoServer *mhProto = new MhProtoServer(sd);
+    MhProtoServer *mhProto = new MhProtoServer(sd, 0);
     for (;;)
         mhProto->RcvCmd();
 }
