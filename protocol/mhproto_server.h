@@ -21,22 +21,25 @@
 
 class MhProtoServer {
  private:
+    unsigned char upload_digest_[DIGEST_SIZE];
     const char *file_name_;
     const char *file_desc_;
     const char *meta_file_;
+    char local_file_[2048];
     MD5Utils md5utils_;
     int sd_;  // Socket Descriptor
-    int64_t   *payLoadArray;
+    int64_t  *payLoadArray_;
+    int64_t  chunk_size_;
     Metadata metadata_;
 
     void SendChunkToClient(void);
     void SendMetadataToClient(void);
+    void ReceiveChunkFromClient(void);
+    void InitUpload(void);
     Chunk *LoadChunkFromFile(int fd , int64_t chunkSize);
-    void setPayLoadArray(int64_t fileSize,
-            int64_t chunkSize, int64_t nChunks);
 
  public:
-    explicit MhProtoServer(int sd);
+    explicit MhProtoServer(int sd, int64_t chunk_size);
     void RcvCmd(void);
     const char *getFileName(void);
     const char *getFileDesc(void);

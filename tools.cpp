@@ -61,11 +61,16 @@ void hex_dump(const void *v_buffer , int size) {
 
 void CopyString(char *dst_str, const char *src_str) {
     if (dst_str == NULL) {
-        cout << "Error: dst_str == NULL" << endl;
+        cout << "CopyString Error: dst_str == NULL" << endl;
         return;
     }
     if (src_str == NULL) {
-        cout << "Error: str_str == NULL" << endl;
+        cout << "CopyString Error: src_str == NULL" << endl;
+        return;
+    }
+    if (dst_str == src_str) {
+        cout << "CopyString Src ptr is equal to Dst ptr. Huge mistake!!!  ";
+        cout << "FIX IT NOW DUMBASS!!!" << endl;
         return;
     }
     snprintf(dst_str, strlen(src_str)+1, "%s", src_str);
@@ -109,12 +114,16 @@ void PrintColor(const char *str, const char *color) {
 const char *AbsoluteFile(const char *full_path) {
     const char *abs_file;
 
+    bool separator_found = false;
     for (int i = strlen(full_path) ; i > 0 ; i--) {
         if (full_path[i] == '/') {
+            separator_found = true;
             abs_file = strdup(&full_path[i+1]);
             break;
         }
     }
+    if (!separator_found)
+        abs_file = strdup(full_path);
 
     return abs_file;
 }
@@ -139,4 +148,30 @@ bool fileExists(const char *fname) {
     }
 
     return false;
+}
+
+int SuffixToInt(const char *str_number) {
+    int len = strlen(str_number);
+    char aux[64];
+
+    memset(aux, 0, sizeof(aux));
+
+    char suffix = str_number[len-1];
+
+    if (suffix >= 0x30 && suffix <= 0x39) {
+        return atoi(str_number);
+    }
+
+    suffix = suffix | 0x20;
+    strncpy(aux, str_number, len-1);
+
+    switch (suffix) {
+        case 'k' : return atoi(aux) * MH_K;
+                   break;
+        case 'm' : return atoi(aux) * MH_M;
+                   break;
+        default  : return -1;
+    }
+
+    return -1;
 }

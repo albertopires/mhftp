@@ -51,6 +51,9 @@
 #define ANSI_SC "\033[s"  // ANSI Save cursor position
 #define ANSI_RC "\033[u"  // ANSI Restore cursort position
 
+#define MH_K 1024
+#define MH_M 1048576
+
 using std::cout;
 using std::endl;
 
@@ -66,5 +69,6 @@ bool file_exists(const char *file_name);
 long i32toLong(int32_t i);  // NOLINT(runtime/int)
 long i64toLong(int64_t i);  // NOLINT(runtime/int)
 bool fileExists(const char *fname);
+int SuffixToInt(const char *str_number);
 
 #endif  // TOOLS_H_

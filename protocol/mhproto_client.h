@@ -34,6 +34,8 @@ class MhProtoClient {
     int shm_key_;
     bool main_proc_;
     bool verbose_;
+    int64_t *payLoadArray_;
+    int64_t chunk_size_;
 
     ChunkInfo *chunkInfo;
     Metadata metadata_;
@@ -44,16 +46,23 @@ class MhProtoClient {
         const char *metaFile,
         const char *localFile);
     void RequestChunk(int cd_sd , int64_t chunkNumber);
+    void UploadFileToServer(int cd_sd, const char *localFile);
     void createError(const char *file);
     void CreateSharedMemory(void);
     void DestroySharedMemory(void);
+    void ClearResources(void);
 
  public:
-    MhProtoClient(int *sd , int numClient, bool verbose);
+    MhProtoClient(int *sd , int numClient, int64_t chunk_size, bool verbose);
     void SndCmd(int cd_sd , unsigned char cmd);
     const char *getFileName(void);
     void DownloadFileFromServer(const char *metaFile, const char *localFile);
-    void DownloadMetadataFromServer(int smd, const char *remote_file);
+    void DownloadMetadataFromServer(
+            int smd,
+            const char *remote_file,
+            int64_t chunk_size);
+    void UploadFileToServer(const char *localFile);
+    void InitUploadOnServer(int smd, const char *local_file, bool create);
     void KillClient(void);
     int getKillProc(void);
     ~MhProtoClient(void);

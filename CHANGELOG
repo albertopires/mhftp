@@ -1,0 +1,6 @@
+2016-08-04  Alberto Pires de Oliveira Neto  <alberto.pires.on@gmail.com>
+
+    * Upload is now implemented.
+    * fixed: MhClient not removing shared memory if remote file not found.
+    * Bug fix AbsoluteFile() was failing when file was already absolute.
+    * Chunk size can be set on command line.
