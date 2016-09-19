@@ -10,10 +10,8 @@ If a metadata file matching the file name is present on the current directory th
 <br>This may also happen if the client program aborts unexpectedly like a SIGKILL, power failure, network error, etc.
 
 
-As of this version, the chunk size is fixed at 1MB, but very soon it will be configurable. Although the size of 1MB suits a good range of file sizes, for larger files the metadata file may become too big.
-
 ## Before you ask ##
-It could be a **FAQ**, but so far there are not Frequently Asked Questions, or any asked question for that matter, but, a few things you should know:
+It could be a **FAQ**, but so far there are no Frequently Asked Questions, or any asked question for that matter, but, a few things you should know:
 
 * To take advantage of **n** links, the server must be running on a multi-homed host.
 * Your multi-homed host must be configured properly. I'm talking about symmetric routing. If you don't know what it that is, take a look at this [howto](http://www.microhowto.info/howto/ensure_symmetric_routing_on_a_server_with_multiple_default_gateways.html).
@@ -68,7 +66,7 @@ user@server:~/git/mhftp (master)$ ./mhclient download -v -c 5M archive.tar 192.1
 
 
 ***mhstatus*** inspects and modifies the metadata file.<br>
-Just running `mhstatus file.mdata` will show the number of chunks and a sequence of letters indicating the status of each chunk. These status are; **P** for pending, **D** for Downloading, **E** for error and **O** for Ok or successfully downloaded.<br>
+Just running `mhstatus file.mdata` will show the number of chunks and a sequence of letters indicating the status of each chunk. These status are; **P** for pending, **D** for Downloading, **U** for Uploading, **E** for error and **O** for Ok or successfully downloaded.<br>
 
 Run `mhstatus -v file.mdata`, for verbose, it will list all chunks status, md5sum and size.<br>
 
