@@ -37,7 +37,7 @@ union semun {
     uint16_t *array;            /**< array for GETALL, SETALL */
     struct seminfo *__buf;      /**< buffer for IPC_INFO */
 };
-#endif
+#endif  // __GNU_LIBRARY__
 
 /** Handle semaphores.
  */
