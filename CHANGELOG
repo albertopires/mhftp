@@ -7,7 +7,7 @@ Changelog for 1.1.0
     * Bug fix AbsoluteFile() was failing when file was already absolute.
     * Chunk size can be set on command line.
 
-Changelog for 1.1.0
+Changelog for 1.1.1
 
 2016-11-08  Alberto Pires de Oliveira Neto  <alberto.pires.on@gmail.com>
 
