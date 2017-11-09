@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Alberto Pires de Oliveira Neto
+ * Copyright (C) 2016-2017 Alberto Pires de Oliveira Neto
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -92,7 +92,7 @@ void MhProtoServer::SendMetadataToClient(void) {
         chunk_size_ = CHUNK_SIZE;
     else
         chunk_size_ = chunk_size;
-    DEBUG("Chunk Size : %ld\n", chunk_size_);
+    DEBUG("Chunk Size : %" PRId64 "\n", chunk_size_);
 
     so_read(sd_, reinterpret_cast<unsigned char*>(&path_size), sizeof(int16_t)); // NOLINT
     DEBUG("Path Size : %d\n", path_size);

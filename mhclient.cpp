@@ -48,7 +48,8 @@ int main(int argc, char *argv[]) {
     int  n_hosts;
     char host[256];
     int  port;
-    bool verbose = false;
+    bool verbose     = false;
+    bool cmd_invalid = true;
 
     printf("MhClient %s\n\n", VER);
 
@@ -107,10 +108,18 @@ int main(int argc, char *argv[]) {
         sds[i-hosts_index] = sd;
     }
 
-    if (strcmp(argv[1], "download") == 0)
+    if (strcmp(argv[1], "download") == 0) {
+        cmd_invalid = false;
         DownloadFile(sds, n_hosts, argv[hosts_index-1], chunk_size, verbose);
-    if (strcmp(argv[1], "upload") == 0)
+    }
+    if (strcmp(argv[1], "upload") == 0) {
+        cmd_invalid = false;
         UploadFile(sds, n_hosts, argv[hosts_index-1], chunk_size, verbose);
+    }
+    if (cmd_invalid) {
+        printf("Invalid command.\n");
+        printf("Use download or upload\n");
+    }
 
     exit(0);
 }
