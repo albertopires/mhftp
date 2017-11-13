@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#define __STDC_FORMAT_MACROS
+
 #ifndef PROTOCOL_MHPROTO_H_
 #define PROTOCOL_MHPROTO_H_
 
