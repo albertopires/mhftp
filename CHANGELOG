@@ -13,3 +13,9 @@ Changelog for 1.1.1
 
     * Tested on Kali/Raspberry Pi 3
     * Bug fixes
+
+Changelog for 1.1.2
+
+2016-11-13  Alberto Pires de Oliveira Neto  <alberto.pires.on@gmail.com>
+
+    * Compile error
